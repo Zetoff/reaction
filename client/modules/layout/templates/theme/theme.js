@@ -1,10 +1,11 @@
-
+import { Reaction } from "/client/modules/core";
+import { Shops } from "/lib/collections";
 
 Meteor.startup(() => {
   Tracker.autorun(() => {
-    const subscription = ReactionCore.Subscriptions.Shops;
+    const subscription = Reaction.Subscriptions.Shops;
     if (subscription.ready()) {
-      const shop = ReactionCore.Collections.Shops.findOne({});
+      const shop = Shops.findOne({});
 
       if (shop) {
         if (shop.theme) {

@@ -1,3 +1,5 @@
+import { ReactionProduct } from "/lib/api";
+
 /**
  * variantList helpers
  */
@@ -5,7 +7,6 @@ Template.variantList.helpers({
   variants: function () {
     let inventoryTotal = 0;
     const variants = ReactionProduct.getTopVariants();
-
     if (variants.length) {
       // calculate inventory total for all variants
       for (let variant of variants) {

@@ -1,7 +1,8 @@
-const Drop = ReactionUI.Lib.Drop;
-
-Template.coreAdminLayout.onCreated(function () {
-});
+import i18next from "i18next";
+import Drop from "tether-drop";
+import { Reaction } from "/client/modules/core";
+import { ReactionRouter } from "/client/modules/router";
+import { Packages } from "/lib/collections";
 
 Template.coreAdminLayout.onRendered(function () {
   $("body").addClass("admin");
@@ -15,7 +16,7 @@ Template.coreAdminLayout.helpers({
   shortcutButtons() {
     const instance = Template.instance();
     const editModeIsEnabled = Session.equals("reaction/editModeEnabled", true);
-    const shortcuts = ReactionCore.Apps({
+    const shortcuts = Reaction.Apps({
       provides: "shortcut",
       enabled: true,
       container: undefined
@@ -92,11 +93,11 @@ Template.coreAdminLayout.helpers({
     const routeName = ReactionRouter.getRouteName();
 
     if (routeName !== "dashboard") {
-      const registryItems = ReactionCore.Apps({provides: "settings", container: routeName});
+      const registryItems = Reaction.Apps({provides: "settings", container: routeName});
       let buttons = [];
 
       for (let item of registryItems) {
-        if (ReactionCore.hasPermission(item.route, Meteor.userId())) {
+        if (Reaction.hasPermission(item.route, Meteor.userId())) {
           let icon = item.icon;
 
           if (!item.icon && item.provides === "settings") {
@@ -109,7 +110,7 @@ Template.coreAdminLayout.helpers({
             tooltip: i18next.t(item.i18nKeyLabel, item.i18n),
             tooltipPosition: "left middle",
             onClick() {
-              ReactionCore.showActionView(item);
+              Reaction.showActionView(item);
             }
           });
         }
@@ -120,11 +121,11 @@ Template.coreAdminLayout.helpers({
   },
 
   control: function () {
-    return ReactionCore.getActionView();
+    return Reaction.getActionView();
   },
 
   adminControlsClassname: function () {
-    if (ReactionCore.isActionViewOpen()) {
+    if (Reaction.isActionViewOpen()) {
       return "show-settings";
     }
     return "";
@@ -135,7 +136,7 @@ Template.coreAdminLayout.helpers({
    * @return {Object} Registry entry for item
    */
   thisApp() {
-    let reactionApp = ReactionCore.Collections.Packages.findOne({
+    let reactionApp = Packages.findOne({
       "registry.provides": "settings",
       "registry.route": ReactionRouter.getRouteName()
     }, {

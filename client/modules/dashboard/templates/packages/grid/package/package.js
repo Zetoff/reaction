@@ -1,3 +1,6 @@
+import { Reaction } from "/client/modules/core";
+import { ReactionRouter } from "/client/modules/router";
+
 /* eslint no-loop-func: 0 */
 
 /**
@@ -11,7 +14,7 @@ function showPackageDashboard(reactionPackage) {
   if (routeName && reactionPackage.route) {
     const route = ReactionRouter.path(routeName);
 
-    if (route && ReactionCore.hasPermission(route, Meteor.userId())) {
+    if (route && Reaction.hasPermission(route, Meteor.userId())) {
       ReactionRouter.go(route);
       return true;
     }
@@ -32,7 +35,7 @@ Template.gridPackage.helpers({
   cardProps() {
     const instance = Template.instance();
     const data = instance.data;
-    const apps = ReactionCore.Apps({
+    const apps = Reaction.Apps({
       provides: "settings",
       name: data.package.packageName
     });
@@ -57,7 +60,7 @@ Template.gridPackage.helpers({
       controls.push({
         icon: app.icon || "fa fa-cog fa-fw",
         onClick() {
-          ReactionCore.showActionView(app);
+          Reaction.showActionView(app);
         }
       });
     }

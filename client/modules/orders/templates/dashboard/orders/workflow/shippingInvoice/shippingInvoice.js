@@ -1,3 +1,5 @@
+import { Media, Orders } from "/lib/collections";
+
 require("money");
 import $ from "jquery";
 require("autonumeric");
@@ -15,7 +17,7 @@ Template.coreOrderShippingInvoice.onCreated(() => {
 
   function getOrder(orderId) {
     template.orderDep.depend();
-    return ReactionCore.Collections.Orders.findOne(orderId);
+    return Orders.findOne(orderId);
   }
 
   Tracker.autorun(() => {
@@ -35,7 +37,7 @@ Template.coreOrderShippingInvoice.onRendered(() => {
   let template = Template.instance();
   let paymentMethod = template.order.billing[0].paymentMethod;
   let refunds = Template.instance().refunds.get();
-  const currency = ReactionCore.Locale.currency;
+  const currency = Reaction.Locale.currency;
 
   const lessAmount = _.reduce(refunds, (memo, refund) => {
     return memo - Math.abs(refund.amount);
@@ -140,11 +142,11 @@ Template.coreOrderShippingInvoice.helpers({
   },
 
   money(amount) {
-    return ReactionCore.Currency.formatNumber(amount);
+    return Reaction.Currency.formatNumber(amount);
   },
 
   currencySymbol() {
-    return ReactionCore.Locale.currency.symbol;
+    return Reaction.Locale.currency.symbol;
   },
 
   disabled() {
@@ -272,7 +274,7 @@ Template.coreOrderShippingInvoice.helpers({
       variantId = variantObjectOrId._id;
     }
 
-    let defaultImage = ReactionCore.Collections.Media.findOne({
+    let defaultImage = Media.findOne({
       "metadata.variantId": variantId,
       "metadata.priority": 0
     });

@@ -1,16 +1,19 @@
+import i18next from "i18next";
+import { Reaction } from "/client/modules/core";
+import { ReactionRouter } from "/client/modules/router";
 
 function pkgPermissions(pkg) {
-  // if (ReactionCore.hasPermission("dashboard")) {
+  // if (Reaction.hasPermission("dashboard")) {
   //   // route specific permissions
   //   if (pkg.name) {
-  //     return ReactionCore.hasPermission(pkg.name);
+  //     return Reaction.hasPermission(pkg.name);
   //   }
   //   // name is a global group role for packages
   //   if (pkg.template) {
-  //     return ReactionCore.hasPermission(pkg.template);
+  //     return Reaction.hasPermission(pkg.template);
   //   }
   // }
-  return ReactionCore.hasPermission(pkg.name);
+  return Reaction.hasPermission(pkg.name);
 }
 
 function enableReactionPackage(reactionPackage) {
@@ -86,7 +89,7 @@ Template.packagesGrid.onCreated(function () {
   });
 
   this.autorun(() => {
-    const apps = ReactionCore.Apps({provides: "dashboard"});
+    const apps = Reaction.Apps({provides: "dashboard"});
     const groupedApps = _.groupBy(apps, (app) => {
       return app.container || "misc";
     });
@@ -110,7 +113,7 @@ Template.packagesGrid.helpers({
   },
 
   shopId() {
-    return ReactionCore.getShopId();
+    return Reaction.getShopId();
   },
 
 

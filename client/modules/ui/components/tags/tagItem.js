@@ -1,8 +1,9 @@
-"use strict";
-const $ = require("jquery");
-// load modules
+import { slugify } from "transliteration";
+import $ from "jquery";
+import { Tags } from "/lib/collections";
+import classnames from "classnames";
+
 require("jquery-ui/autocomplete");
-const classnames = ReactionUI.Lib.classnames;
 
 Template.tagItem.helpers({
   tagBlankProps() {
@@ -42,8 +43,8 @@ Template.tagEditable.onRendered(() => {
     delay: 0,
     source: function (request, response) {
       let datums = [];
-      let slug = getSlug(request.term);
-      ReactionCore.Collections.Tags.find({
+      let slug = slugify(request.term);
+      Tags.find({
         slug: new RegExp(slug, "i")
       }).forEach(function (tag) {
         return datums.push({
@@ -116,8 +117,8 @@ Template.tagBlank.onRendered(() => {
     delay: 0,
     source: function (request, response) {
       let datums = [];
-      let slug = getSlug(request.term);
-      ReactionCore.Collections.Tags.find({
+      let slug = slugify(request.term);
+      Tags.find({
         slug: new RegExp(slug, "i")
       }).forEach(function (tag) {
         return datums.push({

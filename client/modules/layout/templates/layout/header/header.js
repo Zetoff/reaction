@@ -1,3 +1,6 @@
+import { Reaction } from "/client/modules/core";
+import { Tags } from "/lib/collections";
+
 /**
  * layoutHeader events
  */
@@ -28,9 +31,8 @@ Template.layoutHeader.helpers({
 
   tagNavProps() {
     const instance = Template.instance();
-    let tags = [];
 
-    tags = ReactionCore.Collections.Tags.find({
+    const tags = Tags.find({
       isTopLevel: true
     }, {
       sort: {
@@ -40,7 +42,7 @@ Template.layoutHeader.helpers({
 
     return {
       name: "coreHeaderNavigation",
-      editable: ReactionCore.hasAdminAccess(),
+      editable: Reaction.hasAdminAccess(),
       tags: tags,
       onToggleMenu(callback) {
         // Register the callback

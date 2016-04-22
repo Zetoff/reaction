@@ -1,5 +1,7 @@
-
-let Future = Npm.require("fibers/future");
+import Future from "fibers/future";
+import { Cart, Orders, Products, Shops } from "/lib/collections";
+import * as Schemas from "/lib/collections/schemas";
+import { Logger, Reaction } from "/server/api";
 
 /**
  * Reaction Order Methods
@@ -59,7 +61,7 @@ Meteor.methods({
     this.unblock();
 
     if (order) {
-      ReactionCore.Collections.Orders.update({
+      Orders.update({
         "_id": order._id,
         "shipping._id": shipment._id
       }, {
@@ -88,7 +90,7 @@ Meteor.methods({
     check(order, Object);
     this.unblock();
 
-    return ReactionCore.Collections.Orders.update(order._id, {
+    return Orders.update(order._id, {
       $set: {
         "billing.0.paymentMethod.status": "adjustments"
       }
@@ -114,7 +116,7 @@ Meteor.methods({
       + order.billing[0].invoice.taxes
       - Math.abs(discount);
 
-    return ReactionCore.Collections.Orders.update(order._id, {
+    return Orders.update(order._id, {
       $set: {
         "billing.0.paymentMethod.amount": total,
         "billing.0.paymentMethod.status": "approved",
@@ -241,19 +243,19 @@ Meteor.methods({
     check(order, Object);
     this.unblock();
     if (order) {
-      let shop = ReactionCore.Collections.Shops.findOne(order.shopId);
+      let shop = Shops.findOne(order.shopId);
       let shipment = order.shipping[0];
 
-      ReactionCore.configureMailUrl();
-      ReactionCore.Log.info("orders/sendNotification", order.workflow.status);
+      Reaction.configureMailUrl();
+      Logger.info("orders/sendNotification", order.workflow.status);
       // handle missing root shop email
       if (!shop.emails[0].address) {
         shop.emails[0].address = "no-reply@reactioncommerce.com";
-        ReactionCore.Log.warn("No shop email configured. Using no-reply to send mail");
+        Logger.warn("No shop email configured. Using no-reply to send mail");
       }
       // anonymous users without emails.
       if (!order.email) {
-        ReactionCore.Log.warn("No shop email configured. Using anonymous order.");
+        Logger.warn("No shop email configured. Using anonymous order.");
         return true;
       }
       // email templates can be customized in Templates collection
@@ -273,7 +275,7 @@ Meteor.methods({
           })
         });
       } catch (error) {
-        ReactionCore.Log.fatal("Unable to send notification email: " + error);
+        Logger.fatal("Unable to send notification email: " + error);
         throw new Meteor.Error("error-sending-email", "Unable to send order notification email.", error);
       }
     }
@@ -310,13 +312,13 @@ Meteor.methods({
     check(data, Object);
 
     // temp hack until we build out multiple payment handlers
-    let cart = ReactionCore.Collections.Cart.findOne(cartId);
+    let cart = Cart.findOne(cartId);
     let shippingId = "";
     if (cart.shipping) {
       shippingId = cart.shipping[0]._id;
     }
 
-    return ReactionCore.Collections.Orders.update({
+    return Orders.update({
       "_id": orderId,
       "shipping._id": shippingId
     }, {
@@ -340,7 +342,7 @@ Meteor.methods({
     check(shipment, Object);
     check(tracking, String);
 
-    return ReactionCore.Collections.Orders.update({
+    return Orders.update({
       "_id": order._id,
       "shipping._id": shipment._id
     }, {
@@ -364,7 +366,7 @@ Meteor.methods({
     check(shipmentId, String);
     check(item, Object);
 
-    return ReactionCore.Collections.Orders.update({
+    return Orders.update({
       "_id": orderId,
       "shipping._id": shipmentId
     }, {
@@ -379,7 +381,7 @@ Meteor.methods({
     check(shipmentId, Number);
     check(item, Object);
 
-    return ReactionCore.Collections.Orders.update({
+    return Orders.update({
       "_id": orderId,
       "shipments._id": shipmentId
     }, {
@@ -400,12 +402,12 @@ Meteor.methods({
   "orders/removeShipment": function (orderId, shipmentIndex) {
     check(orderId, String);
     check(shipmentIndex, Number);
-    ReactionCore.Collections.Orders.update(orderId, {
+    Orders.update(orderId, {
       $unset: {
         [`shipments.${shipmentIndex}`]: 1
       }
     });
-    return ReactionCore.Collections.Orders.update(orderId, {
+    return Orders.update(orderId, {
       $pull: {
         shipments: null
       }
@@ -423,7 +425,7 @@ Meteor.methods({
     check(cartId, String);
     check(email, String);
 
-    return ReactionCore.Collections.Orders.update({cartId: cartId}, {
+    return Orders.update({cartId: cartId}, {
       $set: {
         email: email
       }
@@ -441,7 +443,7 @@ Meteor.methods({
     check(orderId, String);
     check(docId, String);
     check(docType, String);
-    return ReactionCore.Collections.Orders.update(orderId, {
+    return Orders.update(orderId, {
       $addToSet: {
         documents: {
           docId: docId,
@@ -463,7 +465,7 @@ Meteor.methods({
     check(orderId, String);
     check(event, String);
     check(value, Match.Optional(String));
-    return ReactionCore.Collections.Orders.update(orderId, {
+    return Orders.update(orderId, {
       $addToSet: {
         history: {
           event: event,
@@ -483,9 +485,9 @@ Meteor.methods({
    */
   "orders/inventoryAdjust": function (orderId) {
     check(orderId, String);
-    const order = ReactionCore.Collections.Orders.findOne(orderId);
+    const order = Orders.findOne(orderId);
     order.items.forEach(item => {
-      ReactionCore.Collections.Products.update({
+      Products.update({
         _id: item.variants._id
       }, {
         $inc: {
@@ -507,7 +509,7 @@ Meteor.methods({
   "orders/capturePayments": (orderId) => {
     check(orderId, String);
 
-    let order = ReactionCore.Collections.Orders.findOne(orderId);
+    let order = Orders.findOne(orderId);
     const itemIds = order.shipping[0].items.map((item) => {
       return item._id;
     });
@@ -527,7 +529,7 @@ Meteor.methods({
           if (result.saved === true) {
             const metadata = Object.assign(billing.paymentMethod.metadata || {}, result.metadata || {});
 
-            ReactionCore.Collections.Orders.update({
+            Orders.update({
               "_id": orderId,
               "billing.paymentMethod.transactionId": transactionId
             }, {
@@ -541,9 +543,9 @@ Meteor.methods({
               }
             });
           } else {
-            ReactionCore.Log.error("Failed to capture transaction.", order, paymentMethod.transactionId, result.error);
+            Logger.error("Failed to capture transaction.", order, paymentMethod.transactionId, result.error);
 
-            ReactionCore.Collections.Orders.update({
+            Orders.update({
               "_id": orderId,
               "billing.paymentMethod.transactionId": transactionId
             }, {
@@ -581,7 +583,7 @@ Meteor.methods({
       if (error) {
         future.return(error);
       } else {
-        check(result, [ReactionCore.Schemas.Refund]);
+        check(result, [Schemas.Refund]);
         future.return(result);
       }
     });
@@ -605,11 +607,11 @@ Meteor.methods({
     this.unblock();
 
     const processor = paymentMethod.processor.toLowerCase();
-    let order = ReactionCore.Collections.Orders.findOne(orderId);
+    let order = Orders.findOne(orderId);
     let transactionId = paymentMethod.transactionId;
 
     Meteor.call(`${processor}/refund/create`, paymentMethod, amount, (error, result) => {
-      ReactionCore.Collections.Orders.update({
+      Orders.update({
         "_id": orderId,
         "billing.paymentMethod.transactionId": transactionId
       }, {
@@ -619,7 +621,7 @@ Meteor.methods({
       });
 
       if (result.saved === false) {
-        ReactionCore.Log.warn("Failed to capture transaction.", order, paymentMethod.transactionId);
+        Logger.warn("Failed to capture transaction.", order, paymentMethod.transactionId);
 
         throw new Meteor.Error(
           "Failed to capture transaction");

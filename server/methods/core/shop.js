@@ -1,4 +1,10 @@
-import { GeoCoder } from "../../lib/geocoder.js";
+import { slugify } from "transliteration";
+import { Meteor } from "meteor/meteor";
+import { Job } from "meteor/vsivsi:job-collection";
+import * as Collections from "/lib/collections";
+import * as Schemas from "/lib/collections/schemas";
+import { GeoCoder, Logger, Reaction } from "/server/api";
+
 /**
  * Reaction Shop Methods
  */
@@ -11,40 +17,40 @@ Meteor.methods({
    */
   "shop/createShop": function (shopAdminUserId, shopData) {
     check(shopAdminUserId, Match.Optional(String));
-    check(shopData, Match.Optional(ReactionCore.Schemas.Shop));
+    check(shopData, Match.Optional(Schemas.Shop));
     let shop = {};
     // must have owner access to create new shops
-    if (!ReactionCore.hasOwnerAccess()) {
+    if (!Reaction.hasOwnerAccess()) {
       throw new Meteor.Error(403, "Access Denied");
     }
 
     // this.unblock();
-    const count = ReactionCore.Collections.Shops.find().count() || "";
+    const count = Collections.Shops.find().count() || "";
     const currentUser = Meteor.userId();
     // we'll accept a shop object, or clone the current shop
-    shop = shopData || ReactionCore.Collections.Shops.findOne(ReactionCore.getShopId());
+    shop = shopData || Collections.Shops.findOne(Reaction.getShopId());
     // if we don't have any shop data, use fixture
 
-    check(shop, ReactionCore.Schemas.Shop);
+    check(shop, Schemas.Shop);
     if (!currentUser) {
       throw new Meteor.Error("Unable to create shop with specified user");
     }
 
     // identify a shop admin
     let userId = shopAdminUserId || Meteor.userId();
-    let adminRoles = Roles.getRolesForUser(currentUser, ReactionCore.getShopId());
+    let adminRoles = Roles.getRolesForUser(currentUser, Reaction.getShopId());
     // ensure unique id and shop name
     shop._id = Random.id();
     shop.name = shop.name + count;
 
-    check(shop, ReactionCore.Schemas.Shop);
+    check(shop, Schemas.Shop);
     try {
-      ReactionCore.Collections.Shops.insert(shop);
+      Collections.Shops.insert(shop);
     } catch (error) {
-      return ReactionCore.Log.error("Failed to shop/createShop", sanitizedError);
+      return Logger.error("Failed to shop/createShop", sanitizedError);
     }
     // we should have created new shop, or errored
-    ReactionCore.Log.info("Created shop: ", shop._id);
+    Logger.info("Created shop: ", shop._id);
     Roles.addUsersToRoles([currentUser, userId], adminRoles, shop._id);
     return shop._id;
   },
@@ -70,7 +76,7 @@ Meteor.methods({
     }
 
     // get shop locale/currency related data
-    let shop = ReactionCore.Collections.Shops.findOne(ReactionCore.getShopId(), {
+    let shop = Collections.Shops.findOne(Reaction.getShopId(), {
       fields: {
         addressBook: 1,
         locales: 1,
@@ -125,7 +131,7 @@ Meteor.methods({
           if (typeof exchangeRate === "number") {
             result.currency.exchangeRate = exchangeRate;
           } else {
-            ReactionCore.Log.warn("Failed to get currency exchange rates.");
+            Logger.warn("Failed to get currency exchange rates.");
           }
         }
       }
@@ -146,7 +152,7 @@ Meteor.methods({
     this.unblock();
 
     const field = `currencies.${currency}.rate`;
-    const shop = ReactionCore.Collections.Shops.findOne(ReactionCore.getShopId(), {
+    const shop = Collections.Shops.findOne(Reaction.getShopId(), {
       fields: {
         [field]: 1
       }
@@ -161,14 +167,14 @@ Meteor.methods({
    * @summary fetch the latest currency rates from
    * https://openexchangerates.org
    * usage: Meteor.call("shop/fetchCurrencyRate")
-   * @fires ReactionCore.Collections.Shops#update
+   * @fires Collections.Shops#update
    * @returns {undefined}
    */
   "shop/fetchCurrencyRate": function () {
     this.unblock();
 
-    const shopId = ReactionCore.getShopId();
-    const shop = ReactionCore.Collections.Shops.findOne(shopId, {
+    const shopId = Reaction.getShopId();
+    const shop = Collections.Shops.findOne(shopId, {
       fields: {
         addressBook: 1,
         locales: 1,
@@ -180,7 +186,7 @@ Meteor.methods({
     const shopCurrencies = shop.currencies;
 
     // fetch shop settings for api auth credentials
-    const shopSettings = ReactionCore.Collections.Packages.findOne({
+    const shopSettings = Collections.Packages.findOne({
       shopId: shopId,
       name: "core"
     }, {
@@ -216,7 +222,7 @@ Meteor.methods({
           rateResults = HTTP.get(rateUrl);
         } catch (error) {
           if (error.error) {
-            ReactionCore.Log.error(error.message);
+            Logger.error(error.message);
             throw new Meteor.Error(error.message);
           } else {
             // https://openexchangerates.org/documentation#errors
@@ -234,7 +240,7 @@ Meteor.methods({
             };
             let collectionKey = `currencies.${currencyKey}.rate`;
             rateUpdate[collectionKey] = exchangeRates[currencyKey];
-            ReactionCore.Collections.Shops.update(shopId, {
+            Collections.Shops.update(shopId, {
               $set: rateUpdate
             });
           }
@@ -248,14 +254,14 @@ Meteor.methods({
    * @description Method calls by cron job
    * @summary It removes exchange rates that are too old
    * usage: Meteor.call("shop/flushCurrencyRate")
-   * @fires ReactionCore.Collections.Shops#update
+   * @fires Collections.Shops#update
    * @returns {undefined}
    */
   "shop/flushCurrencyRate": function () {
     this.unblock();
 
-    const shopId = ReactionCore.getShopId();
-    const shop = ReactionCore.Collections.Shops.findOne(shopId, {
+    const shopId = Reaction.getShopId();
+    const shop = Collections.Shops.findOne(shopId, {
       fields: {
         currencies: 1
       }
@@ -276,7 +282,7 @@ Meteor.methods({
         let rate = `currencies.${currencyKey}.rate`;
 
         if (typeof currencyConfig.rate === "number") {
-          ReactionCore.Collections.Shops.update(shopId, {
+          Collections.Shops.update(shopId, {
             $unset: {
               [rate]: ""
             }
@@ -293,17 +299,17 @@ Meteor.methods({
    * that's why we update autoform type to "method-update"
    * @param {Object} modifier - the modifier object generated from the form values
    * @param {String} _id - the _id of the document being updated
-   * @fires ReactionCore.Collections.Packages#update
+   * @fires Collections.Packages#update
    * @todo This method fires Packages collection, so maybe someday it could be
    * @returns {undefined}
    * moved to another file
    */
   "shop/updateShopExternalServices": function (modifier, _id) {
-    check(modifier, Match.Optional(ReactionCore.Schemas.CorePackageConfig));
+    check(modifier, Match.Optional(Schemas.CorePackageConfig));
     check(_id, String);
 
     // must have core permissions
-    if (!ReactionCore.hasPermission("core")) {
+    if (!Reaction.hasPermission("core")) {
       throw new Meteor.Error(403, "Access Denied");
     }
     this.unblock();
@@ -311,7 +317,7 @@ Meteor.methods({
     // we should run new job on every form change, even if not all of them will
     // change currencyRate job
     const refreshPeriod = modifier.$set["settings.openexchangerates.refreshPeriod"];
-    const fetchCurrencyRatesJob = new Job(Jobs, "shop/fetchCurrencyRates", {})
+    const fetchCurrencyRatesJob = new Job(Collections.Jobs, "shop/fetchCurrencyRates", {})
       .priority("normal")
       .retry({
         retries: 5,
@@ -328,7 +334,7 @@ Meteor.methods({
         cancelRepeats: true
       });
 
-    ReactionCore.Collections.Packages.update(_id, modifier);
+    Collections.Packages.update(_id, modifier);
     return fetchCurrencyRatesJob;
   },
 
@@ -377,69 +383,69 @@ Meteor.methods({
 
     let newTagId;
     // must have 'core' permissions
-    if (!ReactionCore.hasPermission("core")) {
+    if (!Reaction.hasPermission("core")) {
       throw new Meteor.Error(403, "Access Denied");
     }
     this.unblock();
 
     let newTag = {
-      slug: getSlug(tagName),
+      slug: slugify(tagName),
       name: tagName
     };
 
-    let existingTag = ReactionCore.Collections.Tags.findOne({
+    let existingTag = Collections.Tags.findOne({
       name: tagName
     });
 
     if (tagId) {
-      return ReactionCore.Collections.Tags.update(tagId, {
+      return Collections.Tags.update(tagId, {
         $set: newTag
       }, function () {
-        ReactionCore.Log.info(
+        Logger.info(
           `Changed name of tag ${tagId} to ${tagName}`);
         return true;
       });
     } else if (existingTag) {
       // if is currentTag
       if (currentTagId) {
-        return ReactionCore.Collections.Tags.update(currentTagId, {
+        return Collections.Tags.update(currentTagId, {
           $addToSet: {
             relatedTagIds: existingTag._id
           }
         }, function () {
-          ReactionCore.Log.info(
+          Logger.info(
             `Added tag ${existingTag.name} to the related tags list for tag ${currentTagId}`
           );
           return true;
         });
       }
       // update existing tag
-      return ReactionCore.Collections.Tags.update(existingTag._id, {
+      return Collections.Tags.update(existingTag._id, {
         $set: {
           isTopLevel: true
         }
       }, function () {
-        ReactionCore.Log.info(`Marked tag ${existingTag.name} as a top level tag`);
+        Logger.info(`Marked tag ${existingTag.name} as a top level tag`);
         return true;
       });
     }
     // create newTags
     newTag.isTopLevel = !currentTagId;
-    newTag.shopId = ReactionCore.getShopId();
+    newTag.shopId = Reaction.getShopId();
     newTag.updatedAt = new Date();
     newTag.createdAt = new Date();
-    newTagId = ReactionCore.Collections.Tags.insert(newTag);
+    newTagId = Collections.Tags.insert(newTag);
     if (currentTagId) {
-      return ReactionCore.Collections.Tags.update(currentTagId, {
+      return Collections.Tags.update(currentTagId, {
         $addToSet: {
           relatedTagIds: newTagId
         }
       }, function () {
-        ReactionCore.Log.info(`Added tag${newTag.name} to the related tags list for tag ${currentTagId}`);
+        Logger.info(`Added tag${newTag.name} to the related tags list for tag ${currentTagId}`);
         return true;
       });
     } else if (newTagId && !currentTagId) {
-      ReactionCore.Log.info(`Created tag ${newTag.name}`);
+      Logger.info(`Created tag ${newTag.name}`);
       return true;
     }
     throw new Meteor.Error(403, "Failed to update header tags.");
@@ -455,31 +461,31 @@ Meteor.methods({
     check(tagId, String);
     check(currentTagId, String);
     // must have core permissions
-    if (!ReactionCore.hasPermission("core")) {
+    if (!Reaction.hasPermission("core")) {
       throw new Meteor.Error(403, "Access Denied");
     }
     this.unblock();
     // remove from related tag use
-    ReactionCore.Collections.Tags.update(currentTagId, {
+    Collections.Tags.update(currentTagId, {
       $pull: {
         relatedTagIds: tagId
       }
     });
     // check to see if tag is in use.
-    let productCount = ReactionCore.Collections.Products.find({
+    let productCount = Collections.Products.find({
       hashtags: {
         $in: [tagId]
       }
     }).count();
     // check to see if in use as a related tag
-    let relatedTagsCount = ReactionCore.Collections.Tags.find({
+    let relatedTagsCount = Collections.Tags.find({
       relatedTagIds: {
         $in: [tagId]
       }
     }).count();
     // not in use anywhere, delete it
     if (productCount === 0 && relatedTagsCount === 0) {
-      return ReactionCore.Collections.Tags.remove(tagId);
+      return Collections.Tags.remove(tagId);
     }
     // unable to delete anything
     throw new Meteor.Error(403, "Unable to delete tags that are in use.");
@@ -494,12 +500,12 @@ Meteor.methods({
   "shop/hideHeaderTag": function (tagId) {
     check(tagId, String);
     // must have core permissions
-    if (!ReactionCore.hasPermission("core")) {
+    if (!Reaction.hasPermission("core")) {
       throw new Meteor.Error(403, "Access Denied");
     }
     this.unblock();
     // hide it
-    return ReactionCore.Collections.Tags.update({
+    return Collections.Tags.update({
       _id: tagId
     }, {
       $set: {
@@ -517,7 +523,7 @@ Meteor.methods({
   "shop/getWorkflow": function (name) {
     check(name, String);
 
-    const shopWorkflows = ReactionCore.Collections.Shops.findOne({
+    const shopWorkflows = Collections.Shops.findOne({
       defaultWorkflows: {
         $elemMatch: {
           provides: name
@@ -541,12 +547,12 @@ Meteor.methods({
     check(language, String);
     check(enabled, Boolean);
     // must have core permissions
-    if (!ReactionCore.hasPermission("core")) {
+    if (!Reaction.hasPermission("core")) {
       throw new Meteor.Error(403, "Access Denied");
     }
     this.unblock();
-    return ReactionCore.Collections.Shops.update({
-      "_id": ReactionCore.getShopId(),
+    return Collections.Shops.update({
+      "_id": Reaction.getShopId(),
       "languages.i18n": language
     }, {
       $set: {
@@ -566,21 +572,21 @@ Meteor.methods({
       type: String
     });
     // must have core permissions
-    if (!ReactionCore.hasPermission("core")) {
+    if (!Reaction.hasPermission("core")) {
       throw new Meteor.Error(403, "Access Denied");
     }
     this.unblock();
 
     // Does our shop contain the brandasset we're tring to add
-    const shopWithBrandAsset = ReactionCore.Collections.Shops.findOne({
-      "_id": ReactionCore.getShopId(),
+    const shopWithBrandAsset = Collections.Shops.findOne({
+      "_id": Reaction.getShopId(),
       "brandAssets.type": asset.type
     });
 
     // If it does, then we update it with the new asset reference
     if (shopWithBrandAsset) {
-      return ReactionCore.Collections.Shops.update({
-        "_id": ReactionCore.getShopId(),
+      return Collections.Shops.update({
+        "_id": Reaction.getShopId(),
         "brandAssets.type": "navbarBrandImage"
       }, {
         $set: {
@@ -593,8 +599,8 @@ Meteor.methods({
     }
 
     // Otherwise we insert a new brand asset reference
-    return ReactionCore.Collections.Shops.update({
-      _id: ReactionCore.getShopId()
+    return Collections.Shops.update({
+      _id: Reaction.getShopId()
     }, {
       $push: {
         brandAssets: {
@@ -615,11 +621,11 @@ Meteor.methods({
   "shop/togglePackage": function (packageId, enabled) {
     check(packageId, String);
     check(enabled, Boolean);
-    if (!ReactionCore.hasAdminAccess()) {
+    if (!Reaction.hasAdminAccess()) {
       throw new Meteor.Error(403, "Access Denied");
     }
 
-    return ReactionCore.Collections.Packages.update(packageId, {
+    return Collections.Packages.update(packageId, {
       $set: {
         enabled: !enabled
       }

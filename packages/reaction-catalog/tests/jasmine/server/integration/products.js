@@ -1,3 +1,6 @@
+import { slugify } from "transliteration";
+import { Products, Tags } from "/lib/collections";
+
 /* eslint dot-notation: 0 */
 /* eslint no-loop-func: 0 */
 
@@ -14,17 +17,17 @@ describe("core product methods", function () {
     // if you want to do a real stress test, you could try to comment out
     // this three lines. This is needed only for ./reaction test. In one
     // package test this is ignoring.
-    if (Array.isArray(ReactionCore.Collections.Products._hookAspects.remove.
-        after) && ReactionCore.Collections.Products._hookAspects.remove.after.
+    if (Array.isArray(Products._hookAspects.remove.
+        after) && Products._hookAspects.remove.after.
         length) {
-      spyOn(ReactionCore.Collections.Products._hookAspects.update.after[0],
+      spyOn(Products._hookAspects.update.after[0],
         "aspect");
-      spyOn(ReactionCore.Collections.Products._hookAspects.remove.after[0],
+      spyOn(Products._hookAspects.remove.after[0],
         "aspect");
-      spyOn(ReactionCore.Collections.Products._hookAspects.insert.after[0],
+      spyOn(Products._hookAspects.insert.after[0],
         "aspect");
     }
-    ReactionCore.Collections.Products.direct.remove({});
+    Products.direct.remove({});
   });
 
   describe("products/cloneVariant", function () {
@@ -32,11 +35,11 @@ describe("core product methods", function () {
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "insert");
+        spyOn(Products, "insert");
         expect(function () {
           return Meteor.call("products/cloneVariant", "fakeId", "fakeVarId");
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.insert).not.toHaveBeenCalled();
+        expect(Products.insert).not.toHaveBeenCalled();
       }
     );
 
@@ -45,12 +48,12 @@ describe("core product methods", function () {
       function (done) {
         spyOn(Roles, "userIsInRole").and.returnValue(true);
         const product = faker.reaction.products.add();
-        let variants = ReactionCore.Collections.Products.find({
+        let variants = Products.find({
           ancestors: [product._id]
         }).fetch();
         expect(variants.length).toEqual(1);
         Meteor.call("products/cloneVariant", product._id, variants[0]._id);
-        variants = ReactionCore.Collections.Products.find({
+        variants = Products.find({
           ancestors: [product._id]
         }).count();
         expect(variants).toEqual(2);
@@ -65,23 +68,23 @@ describe("core product methods", function () {
       done => {
         const product = faker.reaction.products.add();
         spyOn(ReactionCore, "hasPermission").and.returnValue(true);
-        const variant = ReactionCore.Collections.Products.find({
+        const variant = Products.find({
           ancestors: [product._id]
         }).fetch();
-        let options = ReactionCore.Collections.Products.find({ ancestors: {
+        let options = Products.find({ ancestors: {
           $in: [variant[0]._id]
         }}).count();
         expect(options).toBe(2);
 
         Meteor.call("products/cloneVariant", product._id, variant[0]._id);
-        const variants = ReactionCore.Collections.Products.find({
+        const variants = Products.find({
           ancestors: [product._id]
         }).fetch();
         const clonedVariant = variants.filter(v => v._id !== variant[0]._id);
         expect(variant[0]._id).not.toEqual(clonedVariant[0]._id);
         expect(variant[0].ancestors).toEqual(clonedVariant[0].ancestors);
 
-        options = ReactionCore.Collections.Products.find({ ancestors: {
+        options = Products.find({ ancestors: {
           $in: [clonedVariant[0]._id]
         }}).count();
         expect(options).toBe(2);
@@ -102,11 +105,11 @@ describe("core product methods", function () {
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
+        spyOn(Products, "update");
         expect(function () {
           return Meteor.call("products/createVariant", "fakeId");
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
       }
     );
 
@@ -115,13 +118,13 @@ describe("core product methods", function () {
       function (done) {
         const product = faker.reaction.products.add();
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        let variants = ReactionCore.Collections.Products.find({
+        let variants = Products.find({
           ancestors: [product._id]
         }).fetch();
         expect(variants.length).toEqual(1);
 
         Meteor.call("products/createVariant", product._id);
-        variants = ReactionCore.Collections.Products.find({
+        variants = Products.find({
           ancestors: [product._id]
         }).fetch();
         expect(variants.length).toEqual(2);
@@ -136,16 +139,16 @@ describe("core product methods", function () {
         let options;
         const product = faker.reaction.products.add();
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        const variant = ReactionCore.Collections.Products.find({
+        const variant = Products.find({
           ancestors: [product._id]
         }).fetch()[0];
-        options = ReactionCore.Collections.Products.find({
+        options = Products.find({
           ancestors: { $in: [variant._id] }
         }).fetch();
         expect(options.length).toEqual(2);
 
         Meteor.call("products/createVariant", variant._id);
-        options = ReactionCore.Collections.Products.find({
+        options = Products.find({
           ancestors: { $in: [variant._id] }
         }).fetch();
         expect(options.length).toEqual(3);
@@ -162,14 +165,14 @@ describe("core product methods", function () {
           title: "newVariant"
         };
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        let variants = ReactionCore.Collections.Products.find({
+        let variants = Products.find({
           ancestors: [product._id]
         }).fetch();
         const firstVariantId = variants[0]._id;
         expect(variants.length).toEqual(1);
 
         Meteor.call("products/createVariant", product._id, newVariant);
-        variants = ReactionCore.Collections.Products.find({
+        variants = Products.find({
           ancestors: [product._id]
         }).fetch();
         const createdVariant = variants.filter(v => v._id !== firstVariantId);
@@ -186,11 +189,11 @@ describe("core product methods", function () {
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
+        spyOn(Products, "update");
         expect(function () {
           return Meteor.call("products/updateVariant", { _id: "fakeId" });
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
       }
     );
 
@@ -198,7 +201,7 @@ describe("core product methods", function () {
       "should update individual variant by admin passing in full object",
       function (done) {
         const product = faker.reaction.products.add();
-        let variant = ReactionCore.Collections.Products.find({
+        let variant = Products.find({
           ancestors: [product._id]
         }).fetch()[0];
         spyOn(Roles, "userIsInRole").and.returnValue(true);
@@ -206,7 +209,7 @@ describe("core product methods", function () {
         variant["title"] = "Updated Title";
         variant["price"] = 7;
         Meteor.call("products/updateVariant", variant);
-        variant = ReactionCore.Collections.Products.find({
+        variant = Products.find({
           ancestors: [product._id]
         }).fetch()[0];
         expect(variant.price).toEqual(7);
@@ -221,7 +224,7 @@ describe("core product methods", function () {
       function (done) {
         let updatedVariant;
         const product = faker.reaction.products.add();
-        let variant = ReactionCore.Collections.Products.find({
+        let variant = Products.find({
           ancestors: [product._id]
         }).fetch()[0];
         spyOn(Roles, "userIsInRole").and.returnValue(true);
@@ -231,7 +234,7 @@ describe("core product methods", function () {
           title: "Updated Title",
           price: 7
         });
-        updatedVariant = ReactionCore.Collections.Products.findOne(variant._id);
+        updatedVariant = Products.findOne(variant._id);
         expect(updatedVariant.price).toEqual(7);
         expect(updatedVariant.title).toEqual("Updated Title");
         expect(updatedVariant.optionTitle).toEqual(variant.optionTitle);
@@ -246,11 +249,11 @@ describe("core product methods", function () {
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "remove");
+        spyOn(Products, "remove");
         expect(function () {
           return Meteor.call("products/deleteVariant", "fakeId");
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.remove).not.toHaveBeenCalled();
+        expect(Products.remove).not.toHaveBeenCalled();
       }
     );
 
@@ -259,12 +262,12 @@ describe("core product methods", function () {
       function (done) {
         spyOn(Roles, "userIsInRole").and.returnValue(true);
         const product = faker.reaction.products.add();
-        let variant = ReactionCore.Collections.Products.find({
+        let variant = Products.find({
           ancestors: [product._id]
         }).fetch();
         expect(variant.length).toEqual(1);
         Meteor.call("products/deleteVariant", variant[0]._id);
-        variant = ReactionCore.Collections.Products.find({
+        variant = Products.find({
           ancestors: [product._id]
         }).fetch();
         expect(variant.length).toEqual(0);
@@ -279,10 +282,10 @@ describe("core product methods", function () {
         spyOn(Roles, "userIsInRole").and.returnValue(true);
         spyOn(ReactionCore, "hasPermission").and.returnValue(true);
         const product = faker.reaction.products.add();
-        const variant = ReactionCore.Collections.Products.find({
+        const variant = Products.find({
           ancestors: [product._id]
         }).fetch()[0];
-        let variants = ReactionCore.Collections.Products.find({ ancestors: {
+        let variants = Products.find({ ancestors: {
           $in: [variant._id]
         }}).fetch();
         expect(variants.length).toBe(2);
@@ -298,18 +301,18 @@ describe("core product methods", function () {
     // cloning hierarchy, so the only way to track that will be cleaning
     // collection on before each test.
     beforeEach(function () {
-      return ReactionCore.Collections.Products.remove({});
+      return Products.remove({});
     });
 
     it(
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "insert");
+        spyOn(Products, "insert");
         expect(function () {
           return Meteor.call("products/cloneProduct", {});
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.insert).not.toHaveBeenCalled();
+        expect(Products.insert).not.toHaveBeenCalled();
       }
     );
 
@@ -319,15 +322,15 @@ describe("core product methods", function () {
         const product = faker.reaction.products.add();
         let productCloned;
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        expect(ReactionCore.Collections.Products.find({
+        expect(Products.find({
           type: "simple"
         }).count()).toEqual(1);
 
         Meteor.call("products/cloneProduct", product);
-        expect(ReactionCore.Collections.Products.find({
+        expect(Products.find({
           type: "simple"
         }).count()).toEqual(2);
-        productCloned = ReactionCore.Collections.Products.find({
+        productCloned = Products.find({
           _id: {
             $ne: product._id
           },
@@ -348,18 +351,18 @@ describe("core product methods", function () {
       done => {
         const product = faker.reaction.products.add();
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        let variants = ReactionCore.Collections.Products.find({
+        let variants = Products.find({
           ancestors: { $in: [product._id] }
         }).fetch();
         expect(variants.length).toBe(3);
         Meteor.call("products/cloneProduct", product);
-        const clone = ReactionCore.Collections.Products.find({
+        const clone = Products.find({
           _id: {
             $ne: product._id
           },
           type: "simple"
         }).fetch()[0];
-        let cloneVariants = ReactionCore.Collections.Products.find({
+        let cloneVariants = Products.find({
           ancestors: { $in: [clone._id] }
         }).fetch();
         expect(cloneVariants.length).toBe(3);
@@ -380,7 +383,7 @@ describe("core product methods", function () {
         const product2 = faker.reaction.products.add();
         spyOn(Roles, "userIsInRole").and.returnValue(true);
         Meteor.call("products/cloneProduct", [product, product2]);
-        const clones = ReactionCore.Collections.Products.find({
+        const clones = Products.find({
           _id: {
             $nin: [product._id, product2._id]
           },
@@ -397,19 +400,19 @@ describe("core product methods", function () {
       done => {
         const product = faker.reaction.products.add();
         const product2 = faker.reaction.products.add();
-        const variants = ReactionCore.Collections.Products.find({
+        const variants = Products.find({
           ancestors: { $in: [product._id, product2._id] }
         }).count();
         spyOn(Roles, "userIsInRole").and.returnValue(true);
         Meteor.call("products/cloneProduct", [product, product2]);
-        const clones = ReactionCore.Collections.Products.find({
+        const clones = Products.find({
           _id: {
             $nin: [product._id, product2._id]
           },
           type: "simple"
         }).fetch();
         expect(clones.length).toBe(2);
-        const clonedVariants = ReactionCore.Collections.Products.find({
+        const clonedVariants = Products.find({
           ancestors: { $in: [clones[0]._id, clones[1]._id] }
         }).count();
         expect(clonedVariants).toEqual(variants);
@@ -431,11 +434,11 @@ describe("core product methods", function () {
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "insert");
+        spyOn(Products, "insert");
         expect(function () {
           return Meteor.call("products/createProduct");
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.insert).not.toHaveBeenCalled();
+        expect(Products.insert).not.toHaveBeenCalled();
       }
     );
 
@@ -443,9 +446,9 @@ describe("core product methods", function () {
       "should create new product",
       function (done) {
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        spyOn(ReactionCore.Collections.Products, "insert").and.returnValue(1);
+        spyOn(Products, "insert").and.returnValue(1);
         expect(Meteor.call("products/createProduct")).toEqual(1);
-        expect(ReactionCore.Collections.Products.insert).toHaveBeenCalled();
+        expect(Products.insert).toHaveBeenCalled();
 
         return done();
       }
@@ -459,7 +462,7 @@ describe("core product methods", function () {
           if (result) {
             // this test successfully finds product variant only by such way
             Meteor.setTimeout(() => {
-              expect(ReactionCore.Collections.Products.find({
+              expect(Products.find({
                 ancestors: [result]
               }).count()).toEqual(1);
 
@@ -476,11 +479,11 @@ describe("core product methods", function () {
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "remove");
+        spyOn(Products, "remove");
         expect(function () {
           return Meteor.call("products/deleteProduct", "fakeId");
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.remove).not.toHaveBeenCalled();
+        expect(Products.remove).not.toHaveBeenCalled();
       }
     );
 
@@ -491,7 +494,7 @@ describe("core product methods", function () {
         spyOn(Roles, "userIsInRole").and.returnValue(true);
         // we expect "4" because we have 1 product and 3 variants
         expect(Meteor.call("products/deleteProduct", product._id)).toBe(4);
-        expect(ReactionCore.Collections.Products.find(product._id).
+        expect(Products.find(product._id).
         count()).toEqual(0);
       }
     );
@@ -501,12 +504,12 @@ describe("core product methods", function () {
       function () {
         const product = faker.reaction.products.add();
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        spyOn(ReactionCore.Collections.Products, "remove");
+        spyOn(Products, "remove");
         expect(function () {
           return Meteor.call("products/deleteProduct", product._id);
         }).toThrow(new Meteor.Error(304,
           "Something goes wrong, nothing was deleted"));
-        expect(ReactionCore.Collections.Products.find(product._id).
+        expect(Products.find(product._id).
         count()).toEqual(1);
       }
     );
@@ -517,12 +520,12 @@ describe("core product methods", function () {
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
+        spyOn(Products, "update");
         expect(function () {
           return Meteor.call("products/updateProductField",
             "fakeId", "title", "Updated Title");
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
       }
     );
 
@@ -533,7 +536,7 @@ describe("core product methods", function () {
         spyOn(Roles, "userIsInRole").and.returnValue(true);
         Meteor.call("products/updateProductField", product._id,
           "title", "Updated Title");
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.title).toEqual("Updated Title");
 
         return done();
@@ -544,13 +547,13 @@ describe("core product methods", function () {
       "should update variant fields",
       function (done) {
         const product = faker.reaction.products.add();
-        let variant = ReactionCore.Collections.Products.findOne({
+        let variant = Products.findOne({
           ancestors: [product._id]
         });
         spyOn(Roles, "userIsInRole").and.returnValue(true);
         Meteor.call("products/updateProductField", variant._id,
           "title", "Updated Title");
-        variant = ReactionCore.Collections.Products.findOne(variant._id);
+        variant = Products.findOne(variant._id);
         expect(variant.title).toEqual("Updated Title");
 
         return done();
@@ -560,21 +563,21 @@ describe("core product methods", function () {
 
   describe("updateProductTags", function () {
     beforeEach(function () {
-      return ReactionCore.Collections.Tags.remove({});
+      return Tags.remove({});
     });
 
     it(
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
-        spyOn(ReactionCore.Collections.Tags, "insert");
+        spyOn(Products, "update");
+        spyOn(Tags, "insert");
         expect(function () {
           return Meteor.call("products/updateProductTags",
             "fakeId", "productTag", null);
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
-        expect(ReactionCore.Collections.Tags.insert).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
+        expect(Tags.insert).not.toHaveBeenCalled();
       }
     );
 
@@ -584,18 +587,18 @@ describe("core product methods", function () {
         let product = faker.reaction.products.add();
         spyOn(Roles, "userIsInRole").and.returnValue(true);
         let tagName = "Product Tag";
-        expect(ReactionCore.Collections.Tags.findOne({
+        expect(Tags.findOne({
           name: tagName
         })).toBeUndefined();
 
         Meteor.call("products/updateProductTags", product._id,
           tagName, null);
-        const tag = ReactionCore.Collections.Tags.findOne({
+        const tag = Tags.findOne({
           name: tagName
         });
-        expect(tag.slug).toEqual(getSlug(tagName));
+        expect(tag.slug).toEqual(slugify(tagName));
 
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.hashtags).toContain(tag._id);
 
         return done();
@@ -608,14 +611,14 @@ describe("core product methods", function () {
         let product = faker.reaction.products.add();
         let tag = Factory.create("tag");
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        expect(ReactionCore.Collections.Tags.find().count()).toEqual(
+        expect(Tags.find().count()).toEqual(
           1);
         expect(product.hashtags).not.toContain(tag._id);
         Meteor.call("products/updateProductTags", product._id, tag.name,
           tag._id);
-        expect(ReactionCore.Collections.Tags.find().count()).toEqual(
+        expect(Tags.find().count()).toEqual(
           1);
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.hashtags).toContain(tag._id);
 
         return done();
@@ -625,20 +628,20 @@ describe("core product methods", function () {
 
   describe("removeProductTag", function () {
     beforeEach(function () {
-      return ReactionCore.Collections.Tags.remove({});
+      return Tags.remove({});
     });
 
     it(
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
-        spyOn(ReactionCore.Collections.Tags, "remove");
+        spyOn(Products, "update");
+        spyOn(Tags, "remove");
         expect(function () {
           return Meteor.call("products/removeProductTag", "fakeId", "tagId");
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
-        expect(ReactionCore.Collections.Tags.remove).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
+        expect(Tags.remove).not.toHaveBeenCalled();
       }
     );
 
@@ -650,14 +653,14 @@ describe("core product methods", function () {
         spyOn(Roles, "userIsInRole").and.returnValue(true);
         Meteor.call("products/updateProductTags", product._id, tag.name,
           tag._id);
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.hashtags).toContain(tag._id);
-        expect(ReactionCore.Collections.Tags.find().count()).toEqual(
+        expect(Tags.find().count()).toEqual(
           1);
         Meteor.call("products/removeProductTag", product._id, tag._id);
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.hashtags).not.toContain(tag._id);
-        expect(ReactionCore.Collections.Tags.find().count()).toEqual(
+        expect(Tags.find().count()).toEqual(
           0);
 
         return done();
@@ -667,17 +670,17 @@ describe("core product methods", function () {
 
   describe("setHandle", () => {
     beforeEach(() => {
-      return ReactionCore.Collections.Tags.remove({});
+      return Tags.remove({});
     });
 
     it(
       "should throw 403 error by non admin",
       () => {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
+        spyOn(Products, "update");
         expect(() => Meteor.call("products/setHandle", "fakeId"))
         .toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
       }
     );
 
@@ -690,7 +693,7 @@ describe("core product methods", function () {
         Meteor.call("products/updateProductField", product._id,
           "title", "new product name");
         Meteor.call("products/setHandle", product._id);
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.handle).not.toEqual(productHandle);
 
         return done();
@@ -705,7 +708,7 @@ describe("core product methods", function () {
         Meteor.call("products/updateProductField", product._id,
           "title", "new second product name");
         Meteor.call("products/setHandle", product._id);
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.handle).toEqual("new-second-product-name");
 
         return done();
@@ -721,7 +724,7 @@ describe("core product methods", function () {
         Meteor.call("products/updateProductField", product._id,
           "title", "new second product name");
         Meteor.call("products/setHandle", product._id);
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.handle).toEqual("new-second-product-name-copy");
 
         return done();
@@ -731,18 +734,18 @@ describe("core product methods", function () {
 
   describe("setHandleTag", function () {
     beforeEach(function () {
-      return ReactionCore.Collections.Tags.remove({});
+      return Tags.remove({});
     });
 
     it(
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
+        spyOn(Products, "update");
         expect(function () {
           return Meteor.call("products/setHandleTag", "fakeId", "tagId");
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
       }
     );
 
@@ -755,7 +758,7 @@ describe("core product methods", function () {
         let tag = Factory.create("tag");
 
         Meteor.call("products/setHandleTag", product._id, tag._id);
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.handle).toEqual(tag.slug);
 
         return done();
@@ -765,18 +768,18 @@ describe("core product methods", function () {
 
   describe("updateProductPosition", function () {
     beforeEach(function () {
-      return ReactionCore.Collections.Tags.remove({});
+      return Tags.remove({});
     });
 
     it(
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
+        spyOn(Products, "update");
         expect(function () {
           return Meteor.call("products/updateProductPosition", "fakeId", {}, "tag");
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
       }
     );
 
@@ -795,7 +798,7 @@ describe("core product methods", function () {
           return Meteor.call("products/updateProductPosition",
             product._id, position, tag.slug);
         }).not.toThrow(new Meteor.Error(403, "Access Denied"));
-        const updatedProduct = ReactionCore.Collections.Products.findOne(
+        const updatedProduct = Products.findOne(
           product._id
         );
         expect(updatedProduct.positions[tag.slug].position).toEqual(0);
@@ -810,11 +813,11 @@ describe("core product methods", function () {
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
+        spyOn(Products, "update");
         expect(function () {
           return Meteor.call("products/updateVariantsPosition", ["fakeId"]);
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
       }
     );
 
@@ -832,13 +835,13 @@ describe("core product methods", function () {
         Meteor.call("products/updateVariantsPosition", [
           product2._id, product3._id, product._id
         ]);
-        const modifiedProduct = ReactionCore.Collections.Products.findOne(
+        const modifiedProduct = Products.findOne(
           product._id
         );
-        const modifiedProduct2 = ReactionCore.Collections.Products.findOne(
+        const modifiedProduct2 = Products.findOne(
           product2._id
         );
-        const modifiedProduct3 = ReactionCore.Collections.Products.findOne(
+        const modifiedProduct3 = Products.findOne(
           product3._id
         );
         expect(modifiedProduct.index).toBe(2);
@@ -855,14 +858,14 @@ describe("core product methods", function () {
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
+        spyOn(Products, "update");
         expect(function () {
           return Meteor.call("products/updateMetaFields", "fakeId", {
             key: "Material",
             value: "Spandex"
           });
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
       }
     );
 
@@ -875,7 +878,7 @@ describe("core product methods", function () {
           key: "Material",
           value: "Spandex"
         });
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.metafields[0].key).toEqual("Material");
         expect(product.metafields[0].value).toEqual("Spandex");
 
@@ -889,11 +892,11 @@ describe("core product methods", function () {
       "should throw 403 error by non admin",
       function () {
         spyOn(Roles, "userIsInRole").and.returnValue(false);
-        spyOn(ReactionCore.Collections.Products, "update");
+        spyOn(Products, "update");
         expect(function () {
           return Meteor.call("products/publishProduct", "fakeId");
         }).toThrow(new Meteor.Error(403, "Access Denied"));
-        expect(ReactionCore.Collections.Products.update).not.toHaveBeenCalled();
+        expect(Products.update).not.toHaveBeenCalled();
       }
     );
 
@@ -906,7 +909,7 @@ describe("core product methods", function () {
         expect(function () {
           return Meteor.call("products/publishProduct", product._id);
         }).not.toThrow(new Meteor.Error(403, "Access Denied"));
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.isVisible).toEqual(!isVisible);
 
         return done();
@@ -922,12 +925,12 @@ describe("core product methods", function () {
         expect(function () {
           return Meteor.call("products/publishProduct", product._id);
         }).not.toThrow(new Meteor.Error(403, "Access Denied"));
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.isVisible).toEqual(!isVisible);
         expect(function () {
           return Meteor.call("products/publishProduct", product._id);
         }).not.toThrow(new Meteor.Error(400, "Bad Request"));
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.isVisible).toEqual(isVisible);
 
         return done();
@@ -940,7 +943,7 @@ describe("core product methods", function () {
         let product = faker.reaction.products.add();
         let isVisible = product.isVisible;
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        ReactionCore.Collections.Products.update(product._id, {
+        Products.update(product._id, {
           $set: {
             title: ""
           }
@@ -951,7 +954,7 @@ describe("core product methods", function () {
         expect(function () {
           return Meteor.call("products/publishProduct", product._id);
         }).not.toThrow(new Meteor.Error(403, "Access Denied"));
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.isVisible).toEqual(isVisible);
 
         return done();
@@ -963,16 +966,16 @@ describe("core product methods", function () {
       function (done) {
         let product = faker.reaction.products.add();
         const isVisible = product.isVisible;
-        let variant = ReactionCore.Collections.Products.findOne({
+        let variant = Products.findOne({
           ancestors: [product._id]
         });
         expect(variant.ancestors).toEqual([product._id]);
-        let options = ReactionCore.Collections.Products.find({
+        let options = Products.find({
           ancestors: [product._id, variant._id]
         }).fetch();
         expect(options.length).toBe(2);
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        ReactionCore.Collections.Products.update(options[0]._id, {
+        Products.update(options[0]._id, {
           $set: {
             price: 0
           }
@@ -984,7 +987,7 @@ describe("core product methods", function () {
           return Meteor.call("products/publishProduct", product._id);
         }).toThrow(new Meteor.Error(403, "Forbidden",
           "Some properties are missing."));
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.isVisible).toEqual(isVisible);
 
         return done();
@@ -1002,13 +1005,13 @@ describe("core product methods", function () {
         let product = faker.reaction.products.add();
         let isVisible = product.isVisible;
         spyOn(Roles, "userIsInRole").and.returnValue(true);
-        ReactionCore.Collections.Products.remove({
+        Products.remove({
           ancestors: { $in: [product._id] }
         });
         expect(function () {
           return Meteor.call("products/publishProduct", product._id);
         }).toThrow(new Meteor.Error(403, "Forbidden", "Variant is required"));
-        product = ReactionCore.Collections.Products.findOne(product._id);
+        product = Products.findOne(product._id);
         expect(product.isVisible).toEqual(isVisible);
 
         return done();

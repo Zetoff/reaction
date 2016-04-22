@@ -1,154 +1,7 @@
-/**
- * Reaction Accounts handlers
- * creates a login type "anonymous"
- * default for all unauthenticated visitors
- */
-Accounts.registerLoginHandler(function (options) {
-  if (!options.anonymous) {
-    return {};
-  }
-  let loginHandler;
-  let stampedToken = Accounts._generateStampedLoginToken();
-  let userId = Accounts.insertUserDoc({
-    services: {
-      anonymous: true
-    },
-    token: stampedToken.token
-  });
-  loginHandler = {
-    type: "anonymous",
-    userId: userId
-  };
-  return loginHandler;
-});
+import * as Collections from "/lib/collections";
+import * as Schemas from "/lib/collections/schemas";
+import { Logger, Reaction } from "/server/api";
 
-/**
- * Accounts.onCreateUser event
- * adding either a guest or anonymous role to the user on create
- * adds Accounts record for reaction user profiles
- * we clone the user into accounts, as the user collection is
- * only to be used for authentication.
- *
- * @see: http://docs.meteor.com/#/full/accounts_oncreateuser
- */
-Accounts.onCreateUser(function (options, user) {
-  const shop = ReactionCore.getCurrentShop();
-  const shopId = shop._id;
-  const defaultVisitorRole =  ["anonymous", "guest", "product", "tag", "index", "cart/checkout", "cart/completed"];
-  const defaultRoles =  ["guest", "account/profile", "product", "tag", "index", "cart/checkout", "cart/completed"];
-  let roles = {};
-  let additionals = {
-    profile: {}
-  };
-  if (!user.emails) user.emails = [];
-  // init default user roles
-  // we won't create users unless we have a shop.
-  if (shop) {
-    // if we don't have user.services we're an anonymous user
-    if (!user.services) {
-      roles[shopId] = shop.defaultVisitorRole || defaultVisitorRole;
-    } else {
-      roles[shopId] = shop.defaultRoles || defaultRoles;
-      // also add services with email defined to user.emails[]
-      for (let service in user.services) {
-        if (user.services[service].email) {
-          let email = {
-            provides: "default",
-            address: user.services[service].email,
-            verified: true
-          };
-          user.emails.push(email);
-        }
-        if (user.services[service].name) {
-          user.username = user.services[service].name;
-          additionals.profile.name = user.services[service].name;
-        }
-        // TODO: For now we have here instagram, twitter and google avatar cases
-        // need to make complete list
-        if (user.services[service].picture) {
-          additionals.profile.picture = user.services[service].picture;
-        } else if (user.services[service].profile_image_url_https) {
-          additionals.profile.picture = user.services[service].
-            dprofile_image_url_https;
-        } else if (user.services[service].profile_picture) {
-          additionals.profile.picture = user.services[service].profile_picture;
-        }
-      }
-    }
-    // clone before adding roles
-    let account = Object.assign({}, user, additionals);
-    account.userId = user._id;
-    ReactionCore.Collections.Accounts.insert(account);
-
-    // send a welcome email to new users,
-    // but skip the first default admin user
-    // (default admins already get a verification email)
-    if (!(Meteor.users.find().count() === 0)) {
-      Meteor.call("accounts/sendWelcomeEmail", shopId, user._id);
-    }
-
-    // assign default user roles
-    user.roles = roles;
-
-    // run onCreateUser hooks
-    // (the user object must be returned by all callbacks)
-    const userDoc = ReactionCore.Hooks.Events.run("onCreateUser", user, options);
-
-    return userDoc;
-  }
-});
-
-/**
- * Accounts.onLogin event
- * let's remove "anonymous" role, if the login type isn't "anonymous"
- * @param {Object} options - user account creation options
- * @fires "cart/mergeCart" Method
- */
-Accounts.onLogin(function (opts) {
-  // run onLogin hooks
-  // (the options object must be returned by all callbacks)
-  options = ReactionCore.Hooks.Events.run("onLogin", opts);
-
-  // remove anonymous role
-  // all users are guest, but anonymous user don't have profile access
-  // or ability to order history, etc. so ensure its removed upon login.
-  if (options.type !== "anonymous" && options.type !== "resume") {
-    let update = {
-      $pullAll: {}
-    };
-
-    update.$pullAll["roles." + ReactionCore.getShopId()] = ["anonymous"];
-
-    Meteor.users.update({
-      _id: options.user._id
-    }, update, {
-      multi: true
-    });
-    // debug info
-    ReactionCore.Log.debug("removed anonymous role from user: " +
-      options.user._id);
-
-    // do not call `cart/mergeCart` on methodName === `createUser`, because
-    // in this case `cart/mergeCart` calls from cart publication
-    if (options.methodName === "createUser") return true;
-
-    // onLogin, we want to merge session cart into user cart.
-    const cart = ReactionCore.Collections.Cart.findOne({
-      userId: options.user._id
-    });
-    // for a rare use cases
-    if (typeof cart !== "object") return false;
-    // in current version currentSessionId will be available for anonymous
-    // users only, because it is unknown for me how to pass sessionId when user
-    // logged in
-    const currentSessionId = options.methodArguments &&
-      options.methodArguments.length === 1 &&
-      options.methodArguments[0].sessionId;
-
-    // changing of workflow status from now happens within `cart/mergeCart`
-    return Meteor.call("cart/mergeCart", cart._id, currentSessionId);
-  }
-});
 
 /**
  * Reaction Account Methods
@@ -176,13 +29,13 @@ Meteor.methods({
    * inserted
    */
   "accounts/addressBookAdd": function (address, accountUserId) {
-    check(address, ReactionCore.Schemas.Address);
+    check(address, Schemas.Address);
     check(accountUserId, Match.Optional(String));
     // security, check for admin access. We don't need to check every user call
     // here because we are calling `Meteor.userId` from within this Method.
     if (typeof accountUserId === "string") { // if this will not be a String -
       // `check` will not pass it.
-      if (!ReactionCore.hasAdminAccess()) {
+      if (!Reaction.hasAdminAccess()) {
         throw new Meteor.Error(403, "Access denied");
       }
     }
@@ -194,11 +47,11 @@ Meteor.methods({
       address._id = Random.id();
     }
     // clean schema
-    ReactionCore.Schemas.Address.clean(address);
+    Schemas.Address.clean(address);
     // if address got shippment or billing default, we need to update cart
     // addresses accordingly
     if (address.isShippingDefault || address.isBillingDefault) {
-      const cart = ReactionCore.Collections.Cart.findOne({ userId: userId });
+      const cart = Collections.Cart.findOne({ userId: userId });
       // if cart exists
       // First amend the cart,
       if (typeof cart === "object") {
@@ -211,7 +64,7 @@ Meteor.methods({
       }
       // then change the address that has been affected
       if (address.isShippingDefault) {
-        ReactionCore.Collections.Accounts.update({
+        Collections.Accounts.update({
           "userId": userId,
           "profile.addressBook.isShippingDefault": true
         }, {
@@ -221,7 +74,7 @@ Meteor.methods({
         });
       }
       if (address.isBillingDefault) {
-        ReactionCore.Collections.Accounts.update({
+        Collections.Accounts.update({
           "userId": userId,
           "profile.addressBook.isBillingDefault": true
         }, {
@@ -232,7 +85,7 @@ Meteor.methods({
       }
     }
 
-    return ReactionCore.Collections.Accounts.upsert({
+    return Collections.Accounts.upsert({
       userId: userId
     }, {
       $set: {
@@ -254,14 +107,14 @@ Meteor.methods({
    * @return {Number} The number of affected documents
    */
   "accounts/addressBookUpdate": function (address, accountUserId, type) {
-    check(address, ReactionCore.Schemas.Address);
+    check(address, Schemas.Address);
     check(accountUserId, Match.OneOf(String, null, undefined));
     check(type, Match.Optional(String));
     // security, check for admin access. We don't need to check every user call
     // here because we are calling `Meteor.userId` from within this Method.
     if (typeof accountUserId === "string") { // if this will not be a String -
       // `check` will not pass it.
-      if (!ReactionCore.hasAdminAccess()) {
+      if (!Reaction.hasAdminAccess()) {
         throw new Meteor.Error(403, "Access denied");
       }
     }
@@ -270,7 +123,7 @@ Meteor.methods({
     const userId = accountUserId || Meteor.userId();
     // we need to compare old state of isShippingDefault, isBillingDefault with
     // new state and if it was enabled/disabled reflect this changes in cart
-    const account = ReactionCore.Collections.Accounts.findOne({
+    const account = Collections.Accounts.findOne({
       userId: userId
     });
     const oldAddress = account.profile.addressBook.find(function (addr) {
@@ -285,7 +138,7 @@ Meteor.methods({
 
     if (oldAddress.isShippingDefault !== address.isShippingDefault ||
       oldAddress.isBillingDefault !== address.isBillingDefault) {
-      const cart = ReactionCore.Collections.Cart.findOne({ userId: userId });
+      const cart = Collections.Cart.findOne({ userId: userId });
       // Cart should exist to this moment, so we doesn't need to to verify its
       // existence.
       if (oldAddress.isShippingDefault !== address.isShippingDefault) {
@@ -294,7 +147,7 @@ Meteor.methods({
           // we need to add this address to cart
           Meteor.call("cart/setShipmentAddress", cart._id, address);
           // then, if another address was `ShippingDefault`, we need to unset it
-          ReactionCore.Collections.Accounts.update({
+          Collections.Accounts.update({
             "userId": userId,
             "profile.addressBook.isShippingDefault": true
           }, {
@@ -313,7 +166,7 @@ Meteor.methods({
       if (oldAddress.isBillingDefault !== address.isBillingDefault) {
         if (address.isBillingDefault) {
           Meteor.call("cart/setPaymentAddress", cart._id, address);
-          ReactionCore.Collections.Accounts.update({
+          Collections.Accounts.update({
             "userId": userId,
             "profile.addressBook.isBillingDefault": true
           }, {
@@ -327,7 +180,7 @@ Meteor.methods({
       }
     }
 
-    return ReactionCore.Collections.Accounts.update({
+    return Collections.Accounts.update({
       "userId": userId,
       "profile.addressBook._id": address._id
     }, {
@@ -352,7 +205,7 @@ Meteor.methods({
     // here because we are calling `Meteor.userId` from within this Method.
     if (typeof accountUserId === "string") { // if this will not be a String -
       // `check` will not pass it.
-      if (!ReactionCore.hasAdminAccess()) {
+      if (!Reaction.hasAdminAccess()) {
         throw new Meteor.Error(403, "Access denied");
       }
     }
@@ -362,7 +215,7 @@ Meteor.methods({
     // remove this address in cart, if used, before completely removing
     Meteor.call("cart/unsetAddresses", addressId, userId);
 
-    return ReactionCore.Collections.Accounts.update({
+    return Collections.Accounts.update({
       "userId": userId,
       "profile.addressBook._id": addressId
     }, {
@@ -394,16 +247,16 @@ Meteor.methods({
     check(email, String);
     check(name, String);
     this.unblock();
-    shop = ReactionCore.Collections.Shops.findOne(shopId);
+    shop = Collections.Shops.findOne(shopId);
 
-    if (!ReactionCore.hasPermission("reaction-accounts", Meteor.userId(), shopId)) {
+    if (!Reaction.hasPermission("reaction-accounts", Meteor.userId(), shopId)) {
       throw new Meteor.Error(403, "Access denied");
     }
 
-    ReactionCore.configureMailUrl();
+    Reaction.configureMailUrl();
     // don't send account emails unless email server configured
     if (!process.env.MAIL_URL) {
-      ReactionCore.Log.info(`Mail not configured: suppressing invite email output`);
+      Logger.info(`Mail not configured: suppressing invite email output`);
       return true;
     }
     // everything cool? invite user
@@ -495,8 +348,8 @@ Meteor.methods({
     check(shopId, String);
     check(userId, String);
     this.unblock();
-    const user = ReactionCore.Collections.Accounts.findOne(userId);
-    const shop = ReactionCore.Collections.Shops.findOne(shopId);
+    const user = Collections.Accounts.findOne(userId);
+    const shop = Collections.Shops.findOne(shopId);
     let shopEmail;
 
     // anonymous users arent welcome here
@@ -509,16 +362,16 @@ Meteor.methods({
     // provide some defaults for missing shop email.
     if (!shop.emails) {
       shopEmail = `${shop.name}@localhost`;
-      ReactionCore.Log.debug(`Shop email address not configured. Using ${shopEmail}`);
+      Logger.debug(`Shop email address not configured. Using ${shopEmail}`);
     } else {
       shopEmail = shop.emails[0].address;
     }
 
     // configure email
-    ReactionCore.configureMailUrl();
+    Reaction.configureMailUrl();
     // don't send account emails unless email server configured
     if (!process.env.MAIL_URL) {
-      ReactionCore.Log.info(`Mail not configured: suppressing welcome email output`);
+      Logger.info(`Mail not configured: suppressing welcome email output`);
       return true;
     }
     // fetch and send templates
@@ -535,7 +388,7 @@ Meteor.methods({
         })
       });
     } catch (e) {
-      ReactionCore.Log.warn("Unable to send email, check configuration and port.", e);
+      Logger.warn("Unable to send email, check configuration and port.", e);
     }
   },
   /**
@@ -550,7 +403,7 @@ Meteor.methods({
    * @returns {Boolean} success/failure
    */
   "accounts/addUserPermissions": function (userId, permissions, group) {
-    if (!ReactionCore.hasPermission("reaction-accounts", Meteor.userId(), group)) {
+    if (!Reaction.hasPermission("reaction-accounts", Meteor.userId(), group)) {
       throw new Meteor.Error(403, "Access denied");
     }
     check(userId, Match.OneOf(String, Array));
@@ -560,7 +413,7 @@ Meteor.methods({
     try {
       return Roles.addUsersToRoles(userId, permissions, group);
     } catch (error) {
-      return ReactionCore.Log.info(error);
+      return Logger.info(error);
     }
   },
 
@@ -568,7 +421,7 @@ Meteor.methods({
    * accounts/removeUserPermissions
    */
   "accounts/removeUserPermissions": function (userId, permissions, group) {
-    if (!ReactionCore.hasPermission("reaction-accounts", Meteor.userId(), group)) {
+    if (!Reaction.hasPermission("reaction-accounts", Meteor.userId(), group)) {
       throw new Meteor.Error(403, "Access denied");
     }
     check(userId, String);
@@ -579,7 +432,7 @@ Meteor.methods({
     try {
       return Roles.removeUsersFromRoles(userId, permissions, group);
     } catch (error) {
-      ReactionCore.Log.info(error);
+      Logger.info(error);
       throw new Meteor.Error(403, "Access Denied");
     }
   },
@@ -592,7 +445,7 @@ Meteor.methods({
    * @returns {Boolean} returns Roles.setUserRoles result
    */
   "accounts/setUserPermissions": function (userId, permissions, group) {
-    if (!ReactionCore.hasPermission("reaction-accounts", Meteor.userId(), group)) {
+    if (!Reaction.hasPermission("reaction-accounts", Meteor.userId(), group)) {
       throw new Meteor.Error(403, "Access denied");
     }
     check(userId, String);
@@ -602,7 +455,7 @@ Meteor.methods({
     try {
       return Roles.setUserRoles(userId, permissions, group);
     } catch (error) {
-      ReactionCore.Log.info(error);
+      Logger.info(error);
       return error;
     }
   }

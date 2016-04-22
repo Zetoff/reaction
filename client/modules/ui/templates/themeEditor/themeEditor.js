@@ -1,3 +1,5 @@
+import { ReactionRouter } from "/client/modules/router";
+import { Themes } from "/lib/collections";
 
 Template.uiThemeEditor.onCreated(function () {
   this.state = new ReactiveDict();
@@ -56,7 +58,7 @@ Template.uiThemeEditor.onCreated(function () {
   };
 
   this.autorun(() => {
-    const theme = ReactionCore.Collections.Themes.findOne({name: "base"});
+    const theme = Themes.findOne({name: "base"});
     this.state.set("theme", theme);
 
     if (theme) {

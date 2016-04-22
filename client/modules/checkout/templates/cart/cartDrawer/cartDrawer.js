@@ -1,3 +1,7 @@
+import { Reaction } from "/client/modules/core";
+import { ReactionRouter } from "/client/modules/router";
+import { Cart } from "/lib/collections";
+
 /**
  * cartDrawer helpers
  *
@@ -11,7 +15,7 @@ Template.cartDrawer.helpers({
       return null;
     }
 
-    let storedCart = ReactionCore.Collections.Cart.findOne();
+    let storedCart = Cart.findOne();
     let count = 0;
 
     if (typeof storedCart === "object" && storedCart.items) {
@@ -37,7 +41,7 @@ Template.openCartDrawer.onRendered(function () {
 
 Template.openCartDrawer.helpers({
   cartItems: function () {
-    return ReactionCore.Collections.Cart.findOne().items;
+    return Cart.findOne().items;
   }
 });
 
@@ -71,7 +75,7 @@ Template.emptyCartDrawer.events({
     event.stopPropagation();
     event.preventDefault();
     return $("#cart-drawer-container").fadeOut(300, function () {
-      return toggleSession("displayCart");
+      return Reaction.toggleSession("displayCart");
     });
   }
 });

@@ -1,3 +1,6 @@
+import { Packages } from "/lib/collections";
+import { Reaction } from "/server/api";
+
 /**
  * Packages contains user specific configuration
  * @summary  package publication settings, filtered by permissions
@@ -6,19 +9,18 @@
  */
 Meteor.publish("Packages", function (shopCursor) {
   check(shopCursor, Match.Optional(Object));
+
   if (this.userId === null) {
     return this.ready();
   }
-  const shop = shopCursor || ReactionCore.getCurrentShop();
-  const {
-    Packages
-  } = ReactionCore.Collections;
+
+  const shop = shopCursor || Reaction.getCurrentShop();
 
   // we should always have a shop
   if (shop) {
     // if admin user, return all shop properties
     if (Roles.userIsInRole(this.userId, ["dashboard", "owner", "admin"],
-        ReactionCore.getShopId() || Roles.userIsInRole(this.userId, [
+        Reaction.getShopId() || Roles.userIsInRole(this.userId, [
           "owner", "admin"
         ], Roles.GLOBAL_GROUP))) {
       return Packages.find({

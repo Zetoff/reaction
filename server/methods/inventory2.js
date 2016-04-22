@@ -1,3 +1,8 @@
+import { Catalog } from "/lib/api";
+import { Inventory } from "/lib/collections";
+import * as Schemas from "/lib/collections/schemas";
+import { Logger, Reaction } from "/server/api";
+
 //
 // Inventory methods
 //
@@ -6,33 +11,33 @@ Meteor.methods({
   /**
    * inventory/register
    * @summary check a product and update Inventory collection with inventory documents.
-   * @param {Object} product - valid ReactionCore.Schemas.Product object
+   * @param {Object} product - valid Schemas.Product object
    * @return {Number} - returns the total amount of new inventory created
    */
   "inventory/register": function (product) {
     let type;
     switch (product.type) {
     case "variant":
-      check(product, ReactionCore.Schemas.ProductVariant);
+      check(product, Schemas.ProductVariant);
       type = "variant";
       break;
     default:
-      check(product, ReactionCore.Schemas.Product);
+      check(product, Schemas.Product);
       type = "simple";
     }
     // user needs createProduct permission to register new inventory
-    if (!ReactionCore.hasPermission("createProduct")) {
+    if (!Reaction.hasPermission("createProduct")) {
       throw new Meteor.Error(403, "Access Denied");
     }
     // this.unblock();
 
     let totalNewInventory = 0;
     const productId = type === "variant" ? product.ancestors[0] : product._id;
-    const variants = ReactionCore.getVariants(productId);
+    const variants = Catalog.getVariants(productId);
 
     // we'll check each variant to see if it has been fully registered
     for (let variant of variants) {
-      let inventory = ReactionCore.Collections.Inventory.find({
+      let inventory = Inventory.find({
         productId: productId,
         variantId: variant._id,
         shopId: product.shopId
@@ -45,15 +50,15 @@ Meteor.methods({
         let newQty = variant.inventoryQuantity || 0;
         let i = inventoryVariantCount + 1;
 
-        ReactionInventory.Log.info(
+        Logger.info(
           `inserting ${newQty - inventoryVariantCount
             } new inventory items for ${variant._id}`
         );
 
-        const batch = ReactionCore.Collections.Inventory.
+        const batch = Inventory.
         _collection.rawCollection().initializeUnorderedBulkOp();
         while (i <= newQty) {
-          let id = ReactionCore.Collections.Inventory._makeNewID();
+          let id = Inventory._makeNewID();
           batch.insert({
             _id: id,
             productId: productId,
@@ -77,7 +82,7 @@ Meteor.methods({
           // throw new Meteor.Error("Inventory Anomaly Detected. Abort! Abort!");
           return totalNewInventory;
         }
-        ReactionInventory.Log.debug(`registered ${inserted}`);
+        Logger.debug(`registered ${inserted}`);
         totalNewInventory += inserted;
       }
     }
@@ -92,7 +97,7 @@ Meteor.methods({
    * same amount as the inventoryQuantity but when deleting, we'll refuse to
    * delete anything not workflow.status = "new"
    *
-   * @param  {Object} product - ReactionCore.Schemas.Product object
+   * @param  {Object} product - Schemas.Product object
    * @return {[undefined]} returns undefined
    */
   "inventory/adjust": function (product) { // TODO: this should be variant
@@ -101,15 +106,15 @@ Meteor.methods({
     // adds or updates inventory collection with this product
     switch (product.type) {
     case "variant":
-      check(product, ReactionCore.Schemas.ProductVariant);
+      check(product, Schemas.ProductVariant);
       type = "variant";
       break;
     default:
-      check(product, ReactionCore.Schemas.Product);
+      check(product, Schemas.Product);
       type = "simple";
     }
     // user needs createProduct permission to adjust inventory
-    if (!ReactionCore.hasPermission("createProduct")) {
+    if (!Reaction.hasPermission("createProduct")) {
       throw new Meteor.Error(403, "Access Denied");
     }
     // this.unblock();
@@ -121,7 +126,7 @@ Meteor.methods({
         qty: product.inventoryQuantity || 0
       };
 
-      const inventory = ReactionCore.Collections.Inventory.find({
+      const inventory = Inventory.find({
         productId: product.ancestors[0],
         variantId: product._id
       });
@@ -135,7 +140,7 @@ Meteor.methods({
           // determine how many records to delete
           const removeQty = itemCount - variant.qty;
           // we're only going to delete records that are new
-          const removeInventory = ReactionCore.Collections.Inventory.find({
+          const removeInventory = Inventory.find({
             "variantId": variant._id,
             "workflow.status": "new"
           }, {
@@ -152,7 +157,7 @@ Meteor.methods({
             // we could add handling for the case when aren't enough "new" items
           }
         }
-        ReactionInventory.Log.info(
+        Logger.info(
           `adjust variant ${variant._id} from ${itemCount} to ${results}`
         );
       }
@@ -161,45 +166,45 @@ Meteor.methods({
   /**
    * inventory/remove
    * delete an inventory item permanently
-   * @param  {Object} inventoryItem object type ReactionCore.Schemas.Inventory
+   * @param  {Object} inventoryItem object type Schemas.Inventory
    * @return {String} return remove result
    */
   "inventory/remove": function (inventoryItem) {
-    check(inventoryItem, ReactionCore.Schemas.Inventory);
+    check(inventoryItem, Schemas.Inventory);
     // user needs createProduct permission to adjust inventory
-    if (!ReactionCore.hasPermission("createProduct")) {
+    if (!Reaction.hasPermission("createProduct")) {
       throw new Meteor.Error(403, "Access Denied");
     }
     // this.unblock();
     // todo add bulkOp here
 
-    ReactionInventory.Log.debug("inventory/remove", inventoryItem);
-    return ReactionCore.Collections.Inventory.remove(inventoryItem);
+    Logger.debug("inventory/remove", inventoryItem);
+    return Inventory.remove(inventoryItem);
   },
   /**
    * inventory/shipped
    * mark inventory as shipped
-   * @param  {Array} cartItems array of objects ReactionCore.Schemas.CartItem
+   * @param  {Array} cartItems array of objects Schemas.CartItem
    * @return {undefined}
    */
   "inventory/shipped": function (cartItems) {
-    check(cartItems, [ReactionCore.Schemas.CartItem]);
+    check(cartItems, [Schemas.CartItem]);
     return Meteor.call("inventory/setStatus", cartItems, "shipped");
   },
   /**
    * inventory/shipped
    * mark inventory as returned
-   * @param  {Array} cartItems array of objects ReactionCore.Schemas.CartItem
+   * @param  {Array} cartItems array of objects Schemas.CartItem
    * @return {undefined}
    */
   "inventory/return": function (cartItems) {
-    check(cartItems, [ReactionCore.Schemas.CartItem]);
+    check(cartItems, [Schemas.CartItem]);
     return Meteor.call("inventory/setStatus", cartItems, "return");
   },
   /**
    * inventory/shipped
    * mark inventory as return and available for sale
-   * @param  {Array} cartItems array of objects ReactionCore.Schemas.CartItem
+   * @param  {Array} cartItems array of objects Schemas.CartItem
    * @return {undefined}
    */
   "inventory/returnToStock": function (productId, variantId) {

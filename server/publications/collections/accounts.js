@@ -1,8 +1,9 @@
+import * as Collections from "/lib/collections";
+import { Reaction } from "/server/api";
+
 /**
  * accounts
  */
-
-const Accounts = ReactionCore.Collections.Accounts;
 
 Meteor.publish("Accounts", function (userId) {
   check(userId, Match.OneOf(String, null));
@@ -11,21 +12,21 @@ Meteor.publish("Accounts", function (userId) {
   if (this.userId === null) {
     return this.ready();
   }
-  const shopId = ReactionCore.getShopId();
+  const shopId = Reaction.getShopId();
   if (!shopId) {
     return this.ready();
   }
   // global admin can get all accounts
   if (Roles.userIsInRole(this.userId, ["owner"], Roles.GLOBAL_GROUP)) {
-    return Accounts.find();
+    return Collections.Accounts.find();
     // shop admin gets accounts for just this shop
   } else if (Roles.userIsInRole(this.userId, ["admin", "owner"], shopId)) {
-    return Accounts.find({
+    return Collections.Accounts.find({
       shopId: shopId
     });
   }
   // regular users should get just their account
-  return ReactionCore.Collections.Accounts.find({
+  return Collections.Accounts.find({
     userId: this.userId
   });
 });
@@ -45,7 +46,7 @@ Meteor.publish("UserProfile", function (profileUserId) {
   if (this.userId === null) {
     return this.ready();
   }
-  const shopId = ReactionCore.getShopId();
+  const shopId = Reaction.getShopId();
   if (!shopId) {
     return this.ready();
   }

@@ -1,3 +1,8 @@
+import i18next from "i18next";
+import { Reaction } from "/client/modules/core";
+import { ReactionRouter } from "/client/modules/router";
+import { Orders } from "/lib/collections";
+
 /**
  * cartCompleted helpers
  *
@@ -9,7 +14,7 @@ Template.cartCompleted.helpers({
     if (id) {
       const ccoSub = Meteor.subscribe("CompletedCartOrder", Meteor.userId(), id);
       if (ccoSub.ready()) {
-        return ReactionCore.Collections.Orders.findOne({
+        return Orders.findOne({
           userId: Meteor.userId(),
           cartId: ReactionRouter.getQueryParam("_id")
         });
@@ -24,7 +29,7 @@ Template.cartCompleted.helpers({
   },
   userOrders: function () {
     if (Meteor.user()) {
-      return ReactionCore.Collections.Orders.find({
+      return Orders.find({
         userId: Meteor.userId(),
         cartId: this._id
       });
@@ -55,7 +60,7 @@ Template.cartCompleted.events({
 Template.cartCompleted.onCreated(function () {
   let sessionId = Session.get("sessionId");
   let userId = Meteor.userId();
-  let cartSub = ReactionCore.Subscriptions.Cart = Meteor.subscribe("Cart", sessionId, userId);
+  let cartSub = Reaction.Subscriptions.Cart = Meteor.subscribe("Cart", sessionId, userId);
   cartSub.stop();
-  ReactionCore.Subscriptions.Cart = Meteor.subscribe("Cart", sessionId, userId);
+  Reaction.Subscriptions.Cart = Meteor.subscribe("Cart", sessionId, userId);
 });

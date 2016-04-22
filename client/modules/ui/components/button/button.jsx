@@ -1,13 +1,7 @@
 import React from "react";
-
-const classnames = ReactionUI.Lib.classnames;
+import classnames from "classnames";
 
 class Button extends React.Component {
-
-  props = {
-    toggle: false,
-    active: false
-  };
 
   renderOnStateIcon() {
     if (this.props.onIcon) {
@@ -59,4 +53,9 @@ class Button extends React.Component {
   }
 }
 
-ReactionUI.Components.Button = Button;
+Button.defaultProps = {
+  toggle: false,
+  active: false
+};
+
+export default Button

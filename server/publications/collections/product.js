@@ -1,3 +1,6 @@
+import { Products } from "/lib/collections";
+import { Logger, Reaction } from "/server/api";
+
 /**
  * product detail publication
  * @param {String} productId - productId or handle
@@ -6,11 +9,11 @@
 Meteor.publish("Product", function (productId) {
   check(productId, Match.OptionalOrNull(String));
   if (!productId) {
-    ReactionCore.Log.info("ignoring null request on Product subscription");
+    Logger.info("ignoring null request on Product subscription");
     return this.ready();
   }
   let _id;
-  let shop = ReactionCore.getCurrentShop();
+  let shop = Reaction.getCurrentShop();
   // verify that shop is ready
   if (typeof shop !== "object") {
     return this.ready();
@@ -35,7 +38,7 @@ Meteor.publish("Product", function (productId) {
       $regex: productId,
       $options: "i"
     };
-    const products = ReactionCore.Collections.Products.find(selector).fetch();
+    const products = Products.find(selector).fetch();
     if (products.length > 0) {
       _id = products[0]._id;
     } else {
@@ -44,5 +47,5 @@ Meteor.publish("Product", function (productId) {
   }
   selector = { $or: [{ _id: _id }, { ancestors: { $in: [_id] }}] };
 
-  return ReactionCore.Collections.Products.find(selector);
+  return Products.find(selector);
 });

@@ -1,14 +1,16 @@
+import { Discounts } from "/lib/collections";
+import { Reaction } from "/server/api";
 
 /**
  * discounts
  */
 
 Meteor.publish("Discounts", function () {
-  const shopId = ReactionCore.getShopId();
+  const shopId = Reaction.getShopId();
   if (!shopId) {
     return this.ready();
   }
-  return ReactionCore.Collections.Discounts.find({
+  return Discounts.find({
     shopId: shopId
   });
 });

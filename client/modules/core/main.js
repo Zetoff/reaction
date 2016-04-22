@@ -1,56 +1,62 @@
-import bunyan from "bunyan";
+import { Meteor } from "meteor/meteor";
+import { Tracker } from "meteor/tracker";
+import Logger from "/client/modules/logger";
+import { Countries } from "/client/collections";
+import { localeDep } from  "/client/modules/i18n";
+import { ReactionRouter } from "/client/modules/router";
+import { Packages, Shops } from "/lib/collections";
 
 /**
- * ReactionCore
+ * Reaction core namespace
  * Global reaction shop permissions methods and shop initialization
  */
-_.extend(ReactionCore, {
+export default {
   shopId: null,
-  init: function () {
-    let self;
-    self = this;
+
+  init() {
     // keep an eye out for shop change
-    return Tracker.autorun(function () {
+    return Tracker.autorun(() => {
       let domain;
       let shop;
-      // for clarity this subscription is defined in subscriptions.js
-      if (ReactionCore.Subscriptions.Shops.ready()) {
+
+      if (this.Subscriptions.Shops.ready()) {
         domain = Meteor.absoluteUrl().split("/")[2].split(":")[0];
-        shop = ReactionCore.Collections.Shops.findOne({
+        shop = Shops.findOne({
           domains: domain
         });
 
-
         if (shop) {
-          self.shopId = shop._id;
-          self.shopName = shop.name;
+          this.shopId = shop._id;
+          this.shopName = shop.name;
           // initialize local client Countries collection
           createCountryCollection(shop.locales.countries);
 
+          const locale = Session.get("locale") || {};
+
           // fix for https://github.com/reactioncommerce/reaction/issues/248
           // we need to keep an eye for rates changes
-          const { Locale } = ReactionCore;
-          if (typeof Locale.locale === "object" &&
-            typeof Locale.currency === "object" &&
-            typeof Locale.locale.currency === "string") {
-            const localeCurrency = Locale.locale.currency.split(",")[0];
+          if (typeof locale.locale === "object" &&
+            typeof locale.currency === "object" &&
+            typeof locale.locale.currency === "string") {
+            const localeCurrency = locale.locale.currency.split(",")[0];
             if (typeof shop.currencies[localeCurrency] === "object") {
               if (typeof shop.currencies[localeCurrency].rate === "number") {
-                Locale.currency.rate = shop.currencies[localeCurrency].rate;
+                locale.currency.rate = shop.currencies[localeCurrency].rate;
                 localeDep.changed();
               }
             }
           }
           // we are looking for a shopCurrency changes here
-          if (typeof Locale.shopCurrency === "object") {
-            Locale.shopCurrency = shop.currencies[shop.currency];
+          if (typeof locale.shopCurrency === "object") {
+            locale.shopCurrency = shop.currencies[shop.currency];
             localeDep.changed();
           }
-          return self;
+          return this;
         }
       }
     });
   },
+
   /**
    * hasPermission - client
    * client permissions checks
@@ -61,8 +67,8 @@ _.extend(ReactionCore, {
    * @param {String} checkGroup group - default to shopId
    * @return {Boolean} Boolean - true if has permission
    */
-  hasPermission: function (checkPermissions, checkUserId, checkGroup) {
-    let group = ReactionCore.getShopId();
+  hasPermission(checkPermissions, checkUserId, checkGroup) {
+    let group = this.getShopId();
     let permissions = ["owner"];
 
     // default group to the shop or global if shop
@@ -116,27 +122,33 @@ _.extend(ReactionCore, {
     // no specific permissions found returning false
     return false;
   },
-  hasOwnerAccess: function () {
+
+  hasOwnerAccess() {
     let ownerPermissions = ["owner"];
     return this.hasPermission(ownerPermissions);
   },
-  hasAdminAccess: function () {
+
+  hasAdminAccess() {
     let adminPermissions = ["owner", "admin"];
     return this.hasPermission(adminPermissions);
   },
-  hasDashboardAccess: function () {
+
+  hasDashboardAccess() {
     let dashboardPermissions = ["owner", "admin", "dashboard"];
     return this.hasPermission(dashboardPermissions);
   },
-  getShopId: function () {
+
+  getShopId() {
     return this.shopId;
   },
-  getShopName: function () {
+
+  getShopName() {
     return this.shopName;
   },
-  allowGuestCheckout: function () {
+
+  allowGuestCheckout() {
     let allowGuest = true;
-    let packageRegistry = ReactionCore.Collections.Packages.findOne({
+    let packageRegistry = Packages.findOne({
       name: "core",
       shopId: this.shopId
     });
@@ -148,7 +160,8 @@ _.extend(ReactionCore, {
     }
     return allowGuest;
   },
-  getSellerShopId: function () {
+
+  getSellerShopId() {
     return Roles.getGroupsForUser(this.userId, "admin");
   },
 
@@ -158,56 +171,57 @@ _.extend(ReactionCore, {
    * @param {String} viewData {label, template, data}
    * @returns {String} Session "admin/showActionView"
    */
-  showActionView: function (viewData) {
+  showActionView(viewData) {
     Session.set("admin/showActionView", true);
-    ReactionCore.setActionView(viewData);
+    this.setActionView(viewData);
   },
 
-  isActionViewOpen: function () {
+  isActionViewOpen() {
     return Session.equals("admin/showActionView", true);
   },
 
-  setActionView: function (viewData) {
+  setActionView(viewData) {
     if (viewData) {
       Session.set("admin/actionView", viewData);
     } else {
-      let registryItem = ReactionCore.getRegistryForCurrentRoute(
+      let registryItem = this.getRegistryForCurrentRoute(
         "settings");
 
       if (registryItem) {
-        ReactionCore.setActionView(registryItem);
+        this.setActionView(registryItem);
       } else {
-        ReactionCore.setActionView({
+        this.setActionView({
           template: "blankControls"
         });
       }
     }
   },
 
-  getActionView: function () {
+  getActionView() {
     return Session.get("admin/actionView");
   },
 
-  hideActionView: function () {
+  hideActionView() {
     Session.set("admin/showActionView", false);
   },
 
-  clearActionView: function () {
+  clearActionView() {
     Session.set("admin/actionView", undefined);
   },
 
-  getCurrentTag: function () {
+  getCurrentTag() {
     if (ReactionRouter.getRouteName() === "tag") {
       return ReactionRouter.current().params.slug;
     }
   },
-  getRegistryForCurrentRoute: (provides = "dashboard") => {
+
+  getRegistryForCurrentRoute(provides = "dashboard") {
     ReactionRouter.watchPathChange();
     const currentRouteName = ReactionRouter.getRouteName();
     const currentRoute = ReactionRouter.current();
     const template = currentRoute.route.options.template;
     // find registry entries for routeName
-    let reactionApp = ReactionCore.Collections.Packages.findOne({
+    let reactionApp = Packages.findOne({
       "registry.name": currentRouteName,
       "registry.provides": provides
     }, {
@@ -225,119 +239,11 @@ _.extend(ReactionCore, {
       });
       return settingsData;
     }
-    ReactionCore.Log.debug("getRegistryForCurrentRoute not found", template, provides);
+    Logger.debug("getRegistryForCurrentRoute not found", template, provides);
     return {};
   }
 
-});
-
-/*
- * configure bunyan logging module for reaction client
- * See: https://github.com/trentm/node-bunyan#levels
- * client we'll cofigure WARN as default
- */
-let isDebug = "WARN";
-
-if (typeof Meteor.settings === "object" &&
-  typeof Meteor.settings.public === "object" && Meteor.settings.public.debug) {
-  isDebug = Meteor.settings.public.debug;
-}
-
-const levels = ["FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
-
-if (typeof isDebug !== "boolean" && typeof isDebug !== "undefined") {
-  isDebug = isDebug.toUpperCase();
-}
-
-if (!_.contains(levels, isDebug)) {
-  isDebug = "INFO";
-}
-
-ReactionCore.Log = bunyan.createLogger({
-  name: "core-client"
-});
-
-ReactionCore.Log.level(isDebug);
-
-/*
- * registerLoginHandler
- * method to create anonymous users
- */
-
-Accounts.loginWithAnonymous = function (anonymous, callback) {
-  // We need to be sure that every user will work inside a session. Sometimes
-  // session could be destroyed, for example, by clearing browser's cache. In
-  // that case we need to take care about creating new session before new
-  // user or anonymous will be created/logged in.
-  // The problem here - looks like where is no way to track localStorage:
-  // `amplify.store("ReactionCore.session")` itself. That's why we need to use
-  // another way: `accounts` package uses `setTimeout` for monitoring connection
-  // Accounts.callLoginMethod will be called after clearing cache. We could
-  // latch on this computations by running extra check here.
-  if (typeof amplify.store("ReactionCore.session") !== "string") {
-    const newSession = Random.id();
-    amplify.store("ReactionCore.session", newSession);
-    Session.set("sessionId", newSession);
-  }
-  Accounts.callLoginMethod({
-    methodArguments: [{
-      anonymous: true,
-      sessionId: Session.get("sessionId")
-    }],
-    userCallback: callback
-  });
 };
-
-// @see https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API
-let hidden;
-// let visibilityState; // keep this for a some case
-if (typeof document.hidden !== "undefined") {
-  hidden = "hidden";
-  // visibilityState = "visibilityState";
-} else if (typeof document.mozHidden !== "undefined") {
-  hidden = "mozHidden";
-  // visibilityState = "mozVisibilityState";
-} else if (typeof document.msHidden !== "undefined") {
-  hidden = "msHidden";
-  // visibilityState = "msVisibilityState";
-} else if (typeof document.webkitHidden !== "undefined") {
-  hidden = "webkitHidden";
-  // visibilityState = "webkitVisibilityState";
-}
-
-/**
- *  Startup Reaction
- *  Init Reaction client
- */
-Meteor.startup(function () {
-  // warn on insecure exporting of PackageRegistry settings
-  if (typeof PackageRegistry !== "undefined" && PackageRegistry !== null) {
-    let msg = "PackageRegistry: Insecure export to client.";
-    ReactionCore.Log.warn(msg, PackageRegistry);
-  }
-  // init the core
-  ReactionCore.init();
-  // initialize anonymous guest users
-  return Tracker.autorun(function () {
-    const userId = Meteor.userId();
-    // TODO: maybe `visibilityState` will be better here
-    let isHidden;
-    let guestAreAllowed;
-    let loggingIn;
-    let sessionId;
-    Tracker.nonreactive(function () {
-      guestAreAllowed = ReactionCore.allowGuestCheckout();
-      isHidden = document[hidden];
-      loggingIn = Accounts.loggingIn();
-      sessionId = amplify.store("ReactionCore.session");
-    });
-    if (guestAreAllowed && !userId) {
-      if (!isHidden && !loggingIn || typeof sessionId !== "string") {
-        Accounts.loginWithAnonymous();
-      }
-    }
-  });
-});
 
 /**
  * createCountryCollection
@@ -346,9 +252,8 @@ Meteor.startup(function () {
  * @param {Object} countries -  The countries array on the Shop collection
  * @returns {Array} countryOptions - Sorted array of countries
  */
-createCountryCollection = function (countries) {
+function createCountryCollection(countries) {
   check(countries, Object);
-  ReactionCore.Collections.Countries = new Mongo.Collection(null);
   const countryOptions = [];
   for (let locale in countries) {
     if ({}.hasOwnProperty.call(countries, locale)) {
@@ -370,7 +275,7 @@ createCountryCollection = function (countries) {
   });
 
   for (let country of countryOptions) {
-    ReactionCore.Collections.Countries.insert(country);
+    Countries.insert(country);
   }
   return countryOptions;
-};
+}

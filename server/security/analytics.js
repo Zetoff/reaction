@@ -1,20 +1,10 @@
-ReactionCore.Collections.AnalyticsEvents.allow({
-  insert: function(userId, analyticsEvent) {
-    if (Match.test(analyticsEvent, ReactionCore.Schemas.AnalyticsEvents)) {
-      return true
-    }
-    return false
-  },
-  update: function(userId, analyticsEvent, fields, modifier) {
-    if (modifier.$set && modifier.$set.shopId) {
-      return false;
-    }
-    return true;
-  },
-  remove: function(userId, analyticsEvent) {
-    if (analyticsEvent.shopId !== ReactionCore.getShopId()) {
-      return false;
-    }
-    return true;
-  }
-});
+import { AnalyticsEvents } from "/lib/collections";
+import { Reaction } from "/server/api";
+
+export default function () {
+  AnalyticsEvents.permit("insert").ifLoggedIn().allowInClientCode();
+  AnalyticsEvents.permit(["update", "remove"]).ifHasRole({
+    role: ["admin", "owner"],
+    group: Reaction.getShopId()
+  }).allowInClientCode();
+}

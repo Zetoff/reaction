@@ -1,17 +1,20 @@
+import { Reaction } from "/client/modules/core";
+import { Cart } from "/lib/collections";
+
 /**
  * cartIcon helpers
  *
  */
 Template.cartIcon.helpers({
-  cart: function () {
-    return ReactionCore.Collections.Cart.findOne();
+  cart() {
+    return Cart.findOne();
   }
 });
 
 Template.cartIcon.events({
-  "click .cart-icon": function () {
+  "click .cart-icon"() {
     return $("#cart-drawer-container").fadeOut(300, function () {
-      return toggleSession("displayCart");
+      return Reaction.toggleSession("displayCart");
     });
   }
 });

@@ -1,3 +1,6 @@
+import i18next from "i18next";
+import * as Collections from "/lib/collections";
+
 /*
  * Template.checkoutAddressBook
  * template determines which view should be used:
@@ -6,7 +9,7 @@
  */
 
 Template.addressBook.onCreated(function () {
-  let account = ReactionCore.Collections.Accounts.findOne({
+  let account = Collections.Accounts.findOne({
     userId: Meteor.userId()
   });
 
@@ -34,7 +37,7 @@ Template.addressBook.onCreated(function () {
 
 Template.addressBook.helpers({
   account: function () {
-    let account = ReactionCore.Collections.Accounts.findOne({
+    let account = Collections.Accounts.findOne({
       userId: Meteor.userId()
     });
     return account;
@@ -91,7 +94,7 @@ Template.addressBook.events({
         Alerts.toast(i18next.t("addressBookGrid.cantRemoveThisAddress", { err: error.message }), "error");
       }
       if (result) {
-        let account = ReactionCore.Collections.Accounts.findOne({
+        let account = Collections.Accounts.findOne({
           userId: Meteor.userId()
         });
         if (account) {

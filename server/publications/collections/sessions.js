@@ -1,3 +1,6 @@
+import { Mongo } from "meteor/mongo";
+import { Reaction } from "/server/api";
+
 /**
  * Reaction Server / amplify permanent sessions
  * If no id is passed we create a new session
@@ -32,7 +35,7 @@ Meteor.publish("Sessions", function (sessionId) {
   }
 
   // set global sessionId
-  ReactionCore.sessionId = newSessionId;
+  Reaction.sessionId = newSessionId;
 
   // return cursor
   return ServerSessions.find(newSessionId);

@@ -1,3 +1,9 @@
+import i18next from "i18next";
+import { Reaction } from "/client/modules/core";
+import { ReactionProduct } from "/lib/api";
+import { ReactionRouter } from "/client/modules/router";
+import { Products, Tags } from "/lib/collections";
+
 /**
  * productGrid helpers
  */
@@ -39,7 +45,6 @@ Template.productGrid.onCreated(function () {
   // Update product subscription
   this.autorun(() => {
     const slug = ReactionRouter.getParam("slug");
-    const { Tags } = ReactionCore.Collections;
     const tag = Tags.findOne({ slug: slug }) || Tags.findOne(slug);
     let tags = {}; // this could be shop default implementation needed
     if (tag) {
@@ -54,7 +59,7 @@ Template.productGrid.onCreated(function () {
   });
 
   this.autorun(() => {
-    const isActionViewOpen = ReactionCore.isActionViewOpen();
+    const isActionViewOpen = Reaction.isActionViewOpen();
     if (isActionViewOpen === false) {
       Session.set("productGrid/selectedProducts", []);
     }
@@ -88,7 +93,7 @@ Template.productGrid.events({
       return _.contains(selectedProducts, product._id);
     });
 
-    ReactionCore.showActionView({
+    Reaction.showActionView({
       label: i18next.t("productDetailEdit.productSettings"),
       template: "productSettings",
       type: "product",
@@ -101,7 +106,7 @@ Template.productGrid.events({
 
 Template.productGrid.helpers({
   loadMoreProducts: function () {
-    return ReactionCore.Collections.Products.find().count() >= Session.get("productScrollLimit");
+    return Products.find().count() >= Session.get("productScrollLimit");
   },
   products: function () {
     /*
@@ -155,7 +160,7 @@ Template.productGrid.helpers({
     // `type: { $in: ["simple"] }`, but I found this way is not kind to package
     // creators, because to specify they new product type, they will need to change
     // this file, which broke another piece of compatibility with `reaction`
-    let gridProducts = ReactionCore.Collections.Products.find({
+    let gridProducts = Products.find({
       ancestors: []
       // keep this, as an example
       // type: { $in: ["simple"] }

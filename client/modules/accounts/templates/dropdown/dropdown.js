@@ -1,3 +1,8 @@
+import { Reaction } from "/client/modules/core";
+import Logger from "/client/modules/logger";
+import { ReactionRouter } from "/client/modules/router";
+import { Tags } from "/lib/collections";
+
 Template.loginDropdown.events({
 
   /**
@@ -22,10 +27,10 @@ Template.loginDropdown.events({
     // Meteor.logoutOtherClients();
     Meteor.logout((error) => {
       if (error) {
-        ReactionCore.Log.warn("Failed to logout.", error);
+        Logger.warn("Failed to logout.", error);
       }
       // go home on logout
-      ReactionSubscriptions.reset();
+      Reaction.Subscriptions.Manager.reset();
       ReactionRouter.reload();
       ReactionRouter.go("/");
     });
@@ -50,7 +55,7 @@ Template.loginDropdown.events({
           throw new Meteor.Error("createProduct error", error);
         } else if (productId) {
           currentTagId = Session.get("currentTag");
-          currentTag = ReactionCore.Collections.Tags.findOne(currentTagId);
+          currentTag = Tags.findOne(currentTagId);
           if (currentTag) {
             Meteor.call("products/updateProductTags", productId, currentTag.name, currentTagId);
           }

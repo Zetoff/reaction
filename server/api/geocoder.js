@@ -1,3 +1,6 @@
+import { Packages } from "/lib/collections";
+import { Logger, Reaction } from "/server/api";
+
 /**
  * meteor-geocoder
  * modifed for reaction core.
@@ -17,8 +20,8 @@ export const GeoCoder = function geoCoderConstructor(options) {
   let extra;
   let self = this;
   // fetch shop settings for api auth credentials
-  let shopSettings = ReactionCore.Collections.Packages.findOne({
-    shopId: ReactionCore.getShopId(),
+  let shopSettings = Packages.findOne({
+    shopId: Reaction.getShopId(),
     name: "core"
   }, {
     fields: {
@@ -124,7 +127,7 @@ GeoCoder.prototype.geoip = function geoCoderGeocode(address, callback) {
       geoAddress = Meteor.wrapAsync(gi)(geoAddress);
       return geoAddress.data;
     } catch (error) {
-      ReactionCore.Log.warn("shop/getLocale geoip lookup failure", error);
+      Logger.warn("shop/getLocale geoip lookup failure", error);
       return {};
     }
   }

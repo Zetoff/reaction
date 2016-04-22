@@ -1,3 +1,5 @@
+import { Reaction } from "/client/modules/core";
+import { Tags } from "/lib/collections";
 
 Template.CoreNavigationBar.onCreated(function () {
   this.state = new ReactiveDict();
@@ -31,7 +33,7 @@ Template.CoreNavigationBar.helpers({
     const instance = Template.instance();
     let tags = [];
 
-    tags = ReactionCore.Collections.Tags.find({
+    tags = Tags.find({
       isTopLevel: true
     }, {
       sort: {
@@ -41,7 +43,7 @@ Template.CoreNavigationBar.helpers({
 
     return {
       name: "coreHeaderNavigation",
-      editable: ReactionCore.hasAdminAccess(),
+      editable: Reaction.hasAdminAccess(),
       isEditing: true,
       tags: tags,
       onToggleMenu(callback) {

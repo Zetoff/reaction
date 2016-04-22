@@ -1,9 +1,8 @@
-const Tooltip = ReactionUI.Lib.Tooltip;
-const Icon = ReactionUI.Components.Icon;
-
-Template.button.onCreated(function () {
-
-});
+import i18next from "i18next";
+import { Template }  from "meteor/templating";
+import { i18nextDep } from  "/client/modules/i18n";
+import { Icon } from "/client/modules/ui/components";
+import Tooltip from "tether-tooltip";
 
 Template.button.onRendered(function () {
   const buttonElement = this.$("button, a")[0];
@@ -22,7 +21,7 @@ Template.button.onRendered(function () {
   };
 
   this.autorun(() => {
-    ReactionCore.translationDependency.depend();
+    i18nextDep.depend();
     this.createTooltip();
   });
 });

@@ -1,3 +1,7 @@
+import i18next from "i18next";
+import { Reaction } from "/client/modules/core";
+import * as Collections from "/lib/collections";
+
 Template.registerHelper("getGravatar", function (currentUser, size) {
   const options = {
     secure: true,
@@ -6,7 +10,7 @@ Template.registerHelper("getGravatar", function (currentUser, size) {
   };
   const user = currentUser || Accounts.user();
   if (!user) return false;
-  const account = ReactionCore.Collections.Accounts.findOne(user._id);
+  const account = Collections.Accounts.findOne(user._id);
   // first we check picture exists. Picture has higher priority to display
   if (account && account.profile && account.profile.picture) {
     return account.profile.picture;
@@ -32,7 +36,7 @@ Template.registerHelper("displayName", function (displayUser) {
     // todo: previous check was user.services !== "anonymous", "resume". Is this
     // new check covers previous check?
     if (Roles.userIsInRole(user._id || user.userId, "account/profile",
-      ReactionCore.getShopId())) {
+      Reaction.getShopId())) {
       return i18next.t("accountsUI.guest", {defaultValue: "Guest"});
     }
   }

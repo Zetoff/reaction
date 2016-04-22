@@ -1,3 +1,6 @@
+import { Cart } from "/lib/collections";
+import { Logger, Reaction } from "/server/api";
+
 /**
  * cart
  */
@@ -26,13 +29,13 @@ Meteor.publish("Cart", function (sessionId, userId) {
   // issues/5103
 
   // shopId is also required.
-  const shopId = ReactionCore.getShopId();
+  const shopId = Reaction.getShopId();
   if (!shopId) {
     return this.ready();
   }
 
   // select user cart
-  const cart = ReactionCore.Collections.Cart.find({
+  const cart = Cart.find({
     userId: this.userId,
     shopId: shopId
   });
@@ -46,5 +49,5 @@ Meteor.publish("Cart", function (sessionId, userId) {
   // we may create a cart if we didn't find one.
   const cartId = Meteor.call("cart/createCart", this.userId, sessionId);
 
-  return ReactionCore.Collections.Cart.find(cartId);
+  return Cart.find(cartId);
 });

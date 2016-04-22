@@ -1,4 +1,7 @@
-
+import i18next from "i18next";
+import { Reaction } from "/client/modules/core";
+import { ReactionRouter } from "/client/modules/router";
+import { Orders } from "/lib/collections";
 
 const orderFilters = [{
   name: "new",
@@ -77,14 +80,14 @@ const OrderHelper =  {
 
 function getOrders(filter) {
   const query = OrderHelper.makeQuery(filter);
-  return ReactionCore.Collections.Orders.find(query);
+  return Orders.find(query);
 }
 
 function getFiltersWithCounts() {
   return orderFilters.map((filter) => {
     filter.label = i18next.t(`order.filter.${filter.name}`, {defaultValue: filter.label});
     filter.i18nKeyLabel = `order.filter.${filter.name}`;
-    filter.count = ReactionCore.Collections.Orders.find(OrderHelper.makeQuery(filter.name)).count();
+    filter.count = Orders.find(OrderHelper.makeQuery(filter.name)).count();
 
     if (ReactionRouter.getQueryParam("filter")) {
       filter.active = ReactionRouter.getQueryParam("filter") === filter.name;
@@ -96,7 +99,7 @@ function getFiltersWithCounts() {
 
 Template.orders.onCreated(() => {
   Template.instance().autorun(() => {
-    let isActionViewOpen = ReactionCore.isActionViewOpen();
+    let isActionViewOpen = Reaction.isActionViewOpen();
     const queryParams = ReactionRouter.current().queryParams;
 
     if (isActionViewOpen === false) {
@@ -110,8 +113,8 @@ Template.orders.onCreated(() => {
  */
 Template.orders.helpers({
   orders() {
-    ReactionCore.Subscriptions.Orders = ReactionSubscriptions.subscribe("Orders");
-    if (ReactionCore.Subscriptions.Orders.ready()) {
+    Reaction.Subscriptions.Orders = Reaction.Subscriptions.Manager.subscribe("Orders");
+    if (Reaction.Subscriptions.Orders.ready()) {
       const template = Template.instance();
       const queryParams = ReactionRouter.getQueryParam("filter");
       template.orders = getOrders(queryParams);
@@ -150,10 +153,10 @@ Template.ordersListItem.helpers({
 Template.ordersListItem.events({
   "click [data-event-action=selectOrder]": function (event) {
     event.preventDefault();
-    const isActionViewOpen = ReactionCore.isActionViewOpen();
+    const isActionViewOpen = Reaction.isActionViewOpen();
     // toggle detail views
     if (isActionViewOpen === false) {
-      ReactionCore.showActionView({
+      Reaction.showActionView({
         label: "Order Details",
         data: this,
         props: {
@@ -168,14 +171,14 @@ Template.ordersListItem.events({
   },
   "click [data-event-action=startProcessingOrder]": function (event) {
     event.preventDefault();
-    const isActionViewOpen = ReactionCore.isActionViewOpen();
+    const isActionViewOpen = Reaction.isActionViewOpen();
 
     if (this.workflow.status === "new") {
       Meteor.call("workflow/pushOrderWorkflow", "coreOrderWorkflow", "processing", this);
     }
     // toggle detail views
     if (isActionViewOpen === false) {
-      ReactionCore.showActionView({
+      Reaction.showActionView({
         label: "Order Details",
         data: this,
         props: {
@@ -195,9 +198,9 @@ Template.orderListFilters.events({
   "click [role=tab]": (event) => {
     event.preventDefault();
     const filter = event.currentTarget.getAttribute("data-filter");
-    const isActionViewOpen = ReactionCore.isActionViewOpen();
+    const isActionViewOpen = Reaction.isActionViewOpen();
     if (isActionViewOpen === true) {
-      ReactionCore.hideActionView();
+      Reaction.hideActionView();
     }
     ReactionRouter.setQueryParams({
       filter: filter,

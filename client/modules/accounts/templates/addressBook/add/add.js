@@ -1,8 +1,11 @@
+import i18next from "i18next";
+import * as Collections from "/lib/collections";
+
 Template.addressBookAdd.helpers({
   thisAddress: function () {
     let thisAddress = {};
     // admin should receive his account
-    let account = ReactionCore.Collections.Accounts.findOne({
+    let account = Collections.Accounts.findOne({
       userId: Meteor.userId()
     });
     if (account) {
@@ -31,7 +34,7 @@ Template.addressBookAdd.helpers({
   },
 
   hasAddressBookEntries: function () {
-    let account = ReactionCore.Collections.Accounts.findOne({
+    let account = Collections.Accounts.findOne({
       userId: Meteor.userId()
     });
     if (account) {

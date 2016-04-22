@@ -1,3 +1,7 @@
+import i18next from "i18next";
+import { Reaction } from "/client/modules/core";
+import { ReactionRouter } from "/client/modules/router";
+import { Themes } from "/lib/collections";
 
 Template.uiThemeDetails.onCreated(function () {
   this.state = new ReactiveDict();
@@ -13,7 +17,7 @@ Template.uiThemeDetails.onCreated(function () {
     this.state.set("selectedComponent", selectedComponent);
 
     if (selectedComponent) {
-      ReactionCore.showActionView({
+      Reaction.showActionView({
         label: i18next.t("reactionUI.editTheme", "Edit Theme"),
         props: {
           size: "large"
@@ -24,7 +28,7 @@ Template.uiThemeDetails.onCreated(function () {
   });
 
   this.autorun(() => {
-    this.theme = ReactionCore.Collections.Themes.findOne({name: "base"});
+    this.theme = Themes.findOne({name: "base"});
     this.state.set("theme", this.theme);
   });
 });

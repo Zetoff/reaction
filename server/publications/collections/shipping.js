@@ -1,13 +1,16 @@
+import { Shipping } from "/lib/collections";
+import { Reaction } from "/server/api";
+
 /**
  * shipping
  */
 
 Meteor.publish("Shipping", function () {
-  const shopId = ReactionCore.getShopId();
+  const shopId = Reaction.getShopId();
   if (!shopId) {
     return this.ready();
   }
-  return ReactionCore.Collections.Shipping.find({
+  return Shipping.find({
     shopId: shopId
   });
 });

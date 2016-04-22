@@ -1,10 +1,13 @@
+import { Reaction } from "/client/modules/core";
+import { Packages, Shipping } from "/lib/collections";
+
 /*
  * Template shipping Helpers
  */
 
 Template.shippingDashboardControls.events({
   "click [data-event-action=addShippingProvider]": function () {
-    ReactionCore.showActionView({
+    Reaction.showActionView({
       label: "Add Shipping Provider",
       template: "addShippingProvider"
     });
@@ -19,15 +22,15 @@ Template.shippingSettings.onCreated(function () {
 
 Template.shippingSettings.helpers({
   packageData() {
-    return ReactionCore.Collections.Packages.findOne({
+    return Packages.findOne({
       name: "reaction-shipping"
     });
   },
   shipping() {
     const instance = Template.instance();
     if (instance.subscriptionsReady()) {
-      return ReactionCore.Collections.Shipping.find({
-        shopId: ReactionCore.getShopId()
+      return Shipping.find({
+        shopId: Reaction.getShopId()
       });
     }
   },
@@ -46,8 +49,8 @@ Template.shippingProviderTable.helpers({
   shipping() {
     const instance = Template.instance();
     if (instance.subscriptionsReady()) {
-      return ReactionCore.Collections.Shipping.find({
-        shopId: ReactionCore.getShopId()
+      return Shipping.find({
+        shopId: Reaction.getShopId()
       });
     }
   }
@@ -62,7 +65,7 @@ Template.shipping.events({
     return Alerts.removeSeen();
   },
   "click [data-action=addShippingProvider]"() {
-    ReactionCore.showActionView({
+    Reaction.showActionView({
       label: "Add Shipping Provider",
       template: "addShippingProvider"
     });
@@ -75,7 +78,7 @@ Template.shipping.events({
 
 Template.addShippingMethod.helpers({
   shipping() {
-    return ReactionCore.Collections.Shipping.find();
+    return Shipping.find();
   }
 });
 
@@ -101,7 +104,7 @@ Template.afFormGroup_validRanges.helpers({
 Template.editShippingProvider.events({
   "click [data-event-action=cancelUpdateShippingProvider]"(event) {
     event.preventDefault();
-    ReactionCore.hideActionView();
+    Reaction.hideActionView();
   }
 });
 
@@ -111,7 +114,7 @@ Template.editShippingProvider.events({
 Template.addShippingProvider.events({
   "click [data-event-action=cancelAddShippingProvider]"(event) {
     event.preventDefault();
-    ReactionCore.hideActionView();
+    Reaction.hideActionView();
   }
 });
 
@@ -121,7 +124,7 @@ Template.addShippingProvider.events({
 Template.addShippingMethod.events({
   "click .cancel"(event){
     event.preventDefault();
-    toggleSession("selectedAddShippingMethod");
+    Reaction.toggleSession("selectedAddShippingMethod");
   }
 });
 
@@ -130,7 +133,7 @@ Template.addShippingMethod.events({
  */
 Template.shippingProviderTable.helpers({
   shipping() {
-    return ReactionCore.Collections.Shipping.find();
+    return Shipping.find();
   },
   selectedShippingMethod() {
     let session = Session.get("selectedShippingMethod");
@@ -159,7 +162,7 @@ Template.shippingProviderTable.events({
   "click [data-event-action=editShippingMethod]"(event) {
     event.preventDefault();
 
-    ReactionCore.showActionView({
+    Reaction.showActionView({
       label: "Edit Shipping Method",
       data: this,
       template: "editShippingMethod"
@@ -168,7 +171,7 @@ Template.shippingProviderTable.events({
   "click [data-event-action=editShippingProvider]"(event) {
     event.preventDefault();
 
-    ReactionCore.showActionView({
+    Reaction.showActionView({
       label: "Edit Shipping Provider",
       data: this,
       template: "editShippingProvider"
@@ -192,7 +195,7 @@ Template.shippingProviderTable.events({
   "click [data-event-action=addShippingMethod]"(event) {
     event.preventDefault();
 
-    ReactionCore.showActionView({
+    Reaction.showActionView({
       label: "Add Shipping Method",
       template: "addShippingMethod"
     });
@@ -207,7 +210,7 @@ Template.shippingProviderTable.events({
 AutoForm.hooks({
   "shipping-provider-add-form": {
     onSuccess() {
-      toggleSession("selectedShippingProvider");
+      Reaction.toggleSession("selectedShippingProvider");
       return Alerts.inline("Shipping provider saved.", "success", {
         autoHide: true,
         placement: "shippingPackage"
@@ -230,7 +233,7 @@ AutoForm.hooks({
       return error || false;
     },
     onSuccess() {
-      toggleSession("selectedAddShippingMethod");
+      Reaction.toggleSession("selectedAddShippingMethod");
       return Alerts.inline("Shipping method rate added.", "success", {
         autoHide: true,
         placement: "shippingPackage"

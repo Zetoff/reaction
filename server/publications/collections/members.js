@@ -1,3 +1,5 @@
+import { Logger, Reaction } from "/server/api";
+
 /* eslint quote-props: 0 */
 /**
  * ShopMembers
@@ -12,7 +14,7 @@ Meteor.publish("ShopMembers", function () {
     return this.ready();
   }
   let readPermissions = ["reaction-orders", "owner", "admin", "reaction-accounts"];
-  let shopId = ReactionCore.getShopId();
+  let shopId = Reaction.getShopId();
   if (!shopId) {
     return this.ready();
   }
@@ -48,6 +50,6 @@ Meteor.publish("ShopMembers", function () {
     return Meteor.users.find(EJSON.parse(selector), publish);
   }
 
-  ReactionCore.Log.debug("ShopMembers access denied");
+  Logger.debug("ShopMembers access denied");
   return this.ready();
 });

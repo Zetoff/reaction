@@ -1,6 +1,5 @@
-"use strict";
-const Sortable = ReactionUI.Lib.Sortable;
-const TagHelpers = ReactionUI.TagNav.Helpers;
+import Sortable from "sortablejs";
+import { TagHelpers } from "/client/modules/ui-tagnav/helpers";
 
 Template.tagTree.onRendered(() => {
   const instance = Template.instance();

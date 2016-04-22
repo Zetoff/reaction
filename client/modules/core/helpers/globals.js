@@ -29,10 +29,9 @@ String.prototype.toCamelCase = function () {
  * @param {String} positiveState - optional, if is is positiveState, set opposite
  * @return {Object} return session value
  */
-this.toggleSession = function (sessionVariable, positiveState) {
-  let session;
-  session = Session.get(sessionVariable);
-  positive = positiveState || true;
+export function toggleSession(sessionVariable, positiveState) {
+  const session = Session.get(sessionVariable);
+  const positive = positiveState || true;
   if (_.isEqual(positive, session)) {
     Session.set(sessionVariable, false);
   } else {
@@ -46,7 +45,7 @@ this.toggleSession = function (sessionVariable, positiveState) {
  * locateUser
  * @return {Object} set and return session address based on browser latitude, longitude
  */
-this.locateUser = function () {
+export function locateUser() {
   function successFunction(position) {
     let lat = position.coords.latitude;
     let lng = position.coords.longitude;
@@ -79,7 +78,7 @@ this.locateUser = function () {
  * @param {String} cardNumber - a credit card number
  * @return {String} card label, ie: visa
  */
-this.getCardType = function (cardNumber) {
+export function getCardType(cardNumber) {
   let re = new RegExp("^4");
   if (cardNumber.match(re) !== null) {
     return "visa";
@@ -104,12 +103,11 @@ this.getCardType = function (cardNumber) {
  * @summary determines if a guest checkout is enabled and the login state for users
  * @return {Boolean} true if authenticated user
  */
-this.getGuestLoginState = function () {
-  if (Meteor.userId() === "string" && ReactionCore.getShopId() && ReactionCore.allowGuestCheckout()) {
-    let isGuestFlow = Session.equals("guestCheckoutFlow", true);
-    let isGuest = Roles.userIsInRole(Meteor.userId(), "guest", ReactionCore.getShopId());
-    let isAnonymous = Roles.userIsInRole(Meteor.userId(), "anonymous", ReactionCore
-      .getShopId());
+export function getGuestLoginState() {
+  if (Meteor.userId() === "string" && this.getShopId() && this.allowGuestCheckout()) {
+    const isGuestFlow = Session.equals("guestCheckoutFlow", true);
+    const isGuest = Roles.userIsInRole(Meteor.userId(), "guest", this.getShopId());
+    const isAnonymous = Roles.userIsInRole(Meteor.userId(), "anonymous", this.getShopId());
     if (!isGuestFlow && !isGuest && isAnonymous) {
       return false;
     } else if (!isGuestFlow && isGuest && !isAnonymous) {

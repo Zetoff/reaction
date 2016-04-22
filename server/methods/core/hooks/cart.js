@@ -1,13 +1,17 @@
-// Meteor.after to call after
-ReactionCore.MethodHooks.after("cart/submitPayment", function (options) {
+import { Meteor } from "meteor/meteor";
+import { Cart } from "/lib/collections";
+import { Logger, MethodHooks } from "/server/api";
+
+// // Meteor.after to call after
+MethodHooks.after("cart/submitPayment", function (options) {
   // if cart/submit had an error we won't copy cart to Order
   // and we'll throw an error.
-  ReactionCore.Log.debug("MethodHooks after cart/submitPayment", options);
+  Logger.debug("MethodHooks after cart/submitPayment", options);
   // Default return value is the return value of previous call in method chain
   // or an empty object if there's no result yet.
   let result = options.result || {};
   if (typeof options.error === "undefined") {
-    let cart = ReactionCore.Collections.Cart.findOne({
+    let cart = Cart.findOne({
       userId: Meteor.userId()
     });
     // update workflow

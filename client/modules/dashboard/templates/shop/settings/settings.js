@@ -1,4 +1,6 @@
-const Media = ReactionCore.Collections.Media;
+import i18next from "i18next";
+import { Reaction } from "/client/modules/core";
+import { Media, Packages, Shops } from "/lib/collections";
 
 Template.shopBrandImageOption.helpers({
   cardProps(data) {
@@ -59,12 +61,12 @@ Template.shopBrandImageOption.helpers({
  */
 Template.shopSettings.helpers({
   brandImageSelectProps() {
-    const media = ReactionCore.Collections.Media.find({
+    const media = Media.find({
       "metadata.type": "brandAsset"
     });
 
-    const shop = ReactionCore.Collections.Shops.findOne({
-      "_id": ReactionCore.getShopId(),
+    const shop = Shops.findOne({
+      "_id": Reaction.getShopId(),
       "brandAssets.type": "navbarBrandImage"
     });
 
@@ -105,7 +107,7 @@ Template.shopSettings.helpers({
 
   handleFileUpload() {
     const userId = Meteor.userId();
-    const shopId = ReactionCore.getShopId();
+    const shopId = Reaction.getShopId();
 
     return (files) => {
       for (let file of files) {
@@ -121,19 +123,19 @@ Template.shopSettings.helpers({
   },
 
   shop: function () {
-    return ReactionCore.Collections.Shops.findOne();
+    return Shops.findOne();
   },
   packageData: function () {
-    return ReactionCore.Collections.Packages.findOne({
+    return Packages.findOne({
       name: "core"
     });
   },
   addressBook: function () {
-    const address = ReactionCore.Collections.Shops.findOne().addressBook;
+    const address = Shops.findOne().addressBook;
     return address[0];
   },
   paymentMethodOptions() {
-    const paymentMethods = ReactionCore.Apps({provides: "paymentMethod"});
+    const paymentMethods = Reaction.Apps({provides: "paymentMethod"});
     const options = [{
       label: i18next.t("app.auto"),
       value: "none"

@@ -1,3 +1,6 @@
+import { Translations } from "/lib/collections";
+import { Reaction } from "/server/api";
+
 /**
  * Reaction Shop Methods
  */
@@ -8,15 +11,15 @@ Meteor.methods({
    * @return {undefined}
    */
   "i18n/flushTranslations": function () {
-    if (!ReactionCore.hasAdminAccess()) {
+    if (!Reaction.hasAdminAccess()) {
       throw new Meteor.Error(403, "Access Denied");
     }
-    const shopId = ReactionCore.getShopId();
-    ReactionCore.Collections.Translations.remove({
+    const shopId = Reaction.getShopId();
+    Translations.remove({
       shopId: shopId
     });
     loadCoreTranslations();
-    ReactionImport.flush();
+    Reaction.Import.flush();
   },
   /**
    * i18n/addTranslation
@@ -38,15 +41,15 @@ Meteor.methods({
       i18n = lng[0];
     }
 
-    if (!ReactionCore.hasAdminAccess()) {
+    if (!Reaction.hasAdminAccess()) {
       throw new Meteor.Error(403, "Access Denied");
     }
     const tran = `
       "i18n": "${i18n}",
-      "shopId": "${ReactionCore.getShopId()}"
+      "shopId": "${Reaction.getShopId()}"
     `;
 
     const setTran = `"translation.${namespace}.${key}": "${message}"`;
-    ReactionCore.Collections.Translations.update({tran}, {setTran});
+    Translations.update({tran}, {setTran});
   }
 });

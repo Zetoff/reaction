@@ -1,3 +1,5 @@
+import { ReactionRouter } from "/client/modules/router";
+import { Orders } from "/lib/collections";
 
 /**
  * coreOrderWorkflowHelpers
@@ -33,7 +35,7 @@ Template.coreOrderWorkflow.helpers({
   order() {
     let id = ReactionRouter.getQueryParam("_id");
     if (id) {
-      return ReactionCore.Collections.Orders.findOne(id);
+      return Orders.findOne(id);
     }
     return false;
   },

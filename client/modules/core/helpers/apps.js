@@ -1,3 +1,7 @@
+import { Reaction } from "/client/modules/core";
+import Logger from "/client/modules/logger";
+import { Packages } from "/lib/collections";
+
 /**
  *
  * reactionApps
@@ -46,7 +50,7 @@
  *  }]
  */
 
-function getReactionApps(optionHash) {
+export function Apps(optionHash) {
   let fields;
   let filter;
   let key;
@@ -69,7 +73,7 @@ function getReactionApps(optionHash) {
 
   // you could provide a shopId in optionHash
   if (!options.shopId) {
-    options.shopId = ReactionCore.getShopId();
+    options.shopId = Reaction.getShopId();
   }
 
   reactionApps = [];
@@ -100,7 +104,7 @@ function getReactionApps(optionHash) {
   };
 
   // fetch the packages
-  reactionPackages = ReactionCore.Collections.Packages.find(filter, fields).fetch();
+  reactionPackages = Packages.find(filter, fields).fetch();
 
   // apply filters to registry items
   if (reactionPackages.length) {
@@ -164,11 +168,11 @@ function getReactionApps(optionHash) {
               if (match === Object.keys(registryFilter).length) {
                 if (!registry.packageName) registry.packageName = app.name;
                 if (registry.enabled !== false) {
-                  registry = ReactionCore.translateRegistry(registry, app);
+                  registry = Reaction.translateRegistry(registry, app);
                   registry.enabled = registry.enabled || app.enabled;
                   registry.packageId = app._id;
                   // check permissions before pushing so that templates aren't required.
-                  if (ReactionCore.hasPermission([registry.name, registry.route])) {
+                  if (Reaction.hasPermission([registry.name, registry.route])) {
                     reactionApps.push(registry);
                   }
                 }
@@ -187,16 +191,13 @@ function getReactionApps(optionHash) {
 
   // enable debug to find missing reaction apps
   if (reactionApps.length === 0) {
-    ReactionCore.Log.info("Failed to return matching reaction apps for", optionHash);
+    Logger.info("Failed to return matching reaction apps for", optionHash);
   }
   // we're done.
   return reactionApps;
 }
 
-// Export
-ReactionCore.Apps = getReactionApps;
-
 // Register global template helper
 Template.registerHelper("reactionApps", (optionHash) => {
-  return getReactionApps(optionHash);
+  return Reaction.Apps(optionHash);
 });
